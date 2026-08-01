@@ -1,0 +1,667 @@
+{%- comment -%}
+------------------------------------------------------------------------------
+MENU LIST — Menú tipo "MenuApp" totalmente modulable desde el personalizador.
+
+- Cada bloque "Categoría" apunta a una colección de Shopify (el comerciante
+  crea/edita las categorías creando/editando colecciones en el admin).
+- Barra de filtros por categoría (sticky) con navegación por anclas.
+- Tarjetas con imagen, nombre, descripción, precio y selector de tamaños
+  (variantes) + añadir al carrito por AJAX integrado con el drawer del tema.
+------------------------------------------------------------------------------
+{%- endcomment -%}
+
+{%- assign uid = section.id -%}
+
+{%- capture section_settings -%}
+{
+  "showDrawerAfterAdd": {% if settings.cart_type == 'drawer' %}true{% else %}false{% endif %}
+}
+{%- endcapture -%}
+
+<style>
+  #Menu-{{ uid }} {
+    --menu-card-radius: {{ section.settings.card_radius }}px;
+    --menu-accent: {{ section.settings.accent_color | default: settings.button_background }};
+    --menu-accent-text: {{ section.settings.accent_text_color | default: settings.button_text_color }};
+    --menu-gap: 24px;
+  }
+
+  #Menu-{{ uid }} .MenuSection__Intro {
+    text-align: {{ section.settings.heading_alignment }};
+    margin-bottom: 32px;
+  }
+
+  #Menu-{{ uid }} .MenuSection__Description {
+    max-width: 640px;
+    margin: 12px auto 0;
+    color: var(--text-color-light);
+  }
+  #Menu-{{ uid }} .MenuSection__Intro--left .MenuSection__Description { margin-left: 0; }
+
+  /* ---------- Barra de filtros ---------- */
+  #Menu-{{ uid }} .MenuFilter {
+    position: {% if section.settings.sticky_filter %}sticky{% else %}relative{% endif %};
+    top: var(--header-base-height, 80px);
+    z-index: 5;
+    background: rgba(var(--background-rgb), 0.92);
+    backdrop-filter: saturate(180%) blur(8px);
+    -webkit-backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--menu-gap);
+  }
+
+  #Menu-{{ uid }} .MenuFilter__Track {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 14px 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  #Menu-{{ uid }} .MenuFilter__Track::-webkit-scrollbar { display: none; }
+
+  #Menu-{{ uid }} .MenuFilter__Item {
+    flex: 0 0 auto;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-color);
+    border-radius: 999px;
+    padding: 9px 18px;
+    font-family: var(--heading-font-family);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    white-space: nowrap;
+  }
+  #Menu-{{ uid }} .MenuFilter__Item.is-active,
+  #Menu-{{ uid }} .MenuFilter__Item:hover {
+    background: var(--menu-accent);
+    color: var(--menu-accent-text);
+    border-color: var(--menu-accent);
+  }
+
+  /* ---------- Categorías ---------- */
+  #Menu-{{ uid }} .MenuCategory { padding-top: 12px; margin-bottom: 48px; scroll-margin-top: 140px; }
+  #Menu-{{ uid }} .MenuCategory__Header { margin-bottom: 20px; }
+  #Menu-{{ uid }} .MenuCategory__Title { margin: 0; }
+  #Menu-{{ uid }} .MenuCategory__Desc { margin: 6px 0 0; color: var(--text-color-light); max-width: 640px; }
+
+  /* Layout list */
+  #Menu-{{ uid }} .MenuGrid--list { display: flex; flex-direction: column; gap: 16px; }
+  /* Layout grid */
+  #Menu-{{ uid }} .MenuGrid--grid {
+    display: grid;
+    grid-template-columns: repeat({{ section.settings.grid_columns }}, minmax(0, 1fr));
+    gap: var(--menu-gap);
+  }
+
+  /* ---------- Tarjeta de producto ---------- */
+  #Menu-{{ uid }} .MenuItem {
+    display: flex;
+    gap: 16px;
+    background: var(--light-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--menu-card-radius);
+    padding: 14px;
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  #Menu-{{ uid }} .MenuItem:hover { box-shadow: 0 12px 30px rgba(var(--text-color-rgb), 0.08); transform: translateY(-2px); }
+
+  #Menu-{{ uid }} .MenuGrid--grid .MenuItem { flex-direction: column; }
+
+  #Menu-{{ uid }} .MenuItem__Media {
+    flex: 0 0 {{ section.settings.image_size }}px;
+    width: {{ section.settings.image_size }}px;
+    height: {{ section.settings.image_size }}px;
+    border-radius: calc(var(--menu-card-radius) - 4px);
+    overflow: hidden;
+    background: rgba(var(--text-color-rgb), 0.04);
+  }
+  #Menu-{{ uid }} .MenuGrid--grid .MenuItem__Media { width: 100%; height: auto; aspect-ratio: 1 / 1; flex: none; }
+  #Menu-{{ uid }} .MenuItem__Media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  #Menu-{{ uid }} .MenuItem__Body { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+  #Menu-{{ uid }} .MenuItem__Name { margin: 0; font-size: 16px; }
+  #Menu-{{ uid }} .MenuItem__Desc {
+    margin: 6px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-color-light);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  #Menu-{{ uid }} .MenuItem__Sizes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  #Menu-{{ uid }} .MenuItem__Size {
+    border: 1px solid var(--border-color);
+    background: var(--background);
+    color: var(--text-color);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  #Menu-{{ uid }} .MenuItem__Size.is-selected { background: var(--menu-accent); color: var(--menu-accent-text); border-color: var(--menu-accent); }
+  #Menu-{{ uid }} .MenuItem__Size:disabled { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; }
+
+  #Menu-{{ uid }} .MenuItem__Footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 12px;
+  }
+  #Menu-{{ uid }} .MenuItem__Price { font-family: var(--heading-font-family); font-size: 16px; color: var(--heading-color); }
+  #Menu-{{ uid }} .MenuItem__Price del { color: var(--text-color-light); font-weight: normal; margin-right: 6px; }
+  #Menu-{{ uid }} .MenuItem__Price ins { color: var(--product-sale-price-color); text-decoration: none; }
+
+  #Menu-{{ uid }} .MenuItem__Add {
+    border: none;
+    background: var(--menu-accent);
+    color: var(--menu-accent-text);
+    border-radius: 999px;
+    padding: 9px 16px;
+    font-family: var(--heading-font-family);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+    white-space: nowrap;
+  }
+  #Menu-{{ uid }} .MenuItem__Add:hover { opacity: 0.9; }
+  #Menu-{{ uid }} .MenuItem__Add:active { transform: scale(0.97); }
+  #Menu-{{ uid }} .MenuItem__Add[disabled] { opacity: 0.5; cursor: not-allowed; }
+  #Menu-{{ uid }} .MenuItem__Add.is-loading { pointer-events: none; opacity: 0.7; }
+  #Menu-{{ uid }} .MenuItem__Add.is-added { background: #2e7d32; }
+
+  #Menu-{{ uid }} .MenuCategory__Empty { color: var(--text-color-light); padding: 20px 0; }
+
+  @media (max-width: 640px) {
+    #Menu-{{ uid }} .MenuGrid--grid { grid-template-columns: repeat({{ section.settings.grid_columns_mobile }}, minmax(0, 1fr)); }
+    #Menu-{{ uid }} .MenuItem__Media { flex-basis: 92px; width: 92px; height: 92px; }
+  }
+</style>
+
+<section id="Menu-{{ uid }}" class="Section Section--spacingNormal MenuSection"
+         data-section-id="{{ uid }}"
+         data-section-type="menu-list"
+         data-settings='{{ section_settings }}'>
+  <div class="Container">
+    {%- if section.settings.title != blank or section.settings.description != blank -%}
+      <header class="MenuSection__Intro MenuSection__Intro--{{ section.settings.heading_alignment }}">
+        {%- if section.settings.subheading != blank -%}
+          <p class="Heading u-h6 Text--subdued">{{ section.settings.subheading | escape }}</p>
+        {%- endif -%}
+        {%- if section.settings.title != blank -%}
+          <h2 class="MenuSection__Title Heading u-h1">{{ section.settings.title | escape }}</h2>
+        {%- endif -%}
+        {%- if section.settings.description != blank -%}
+          <div class="MenuSection__Description Rte">{{ section.settings.description }}</div>
+        {%- endif -%}
+      </header>
+    {%- endif -%}
+  </div>
+
+  {%- comment -%} Barra de filtros de categorías {%- endcomment -%}
+  {%- if section.settings.show_filter and section.blocks.size > 0 -%}
+    <div class="MenuFilter" data-menu-filter>
+      <div class="Container">
+        <div class="MenuFilter__Track">
+          {%- if section.settings.show_all_tab -%}
+            <button type="button" class="MenuFilter__Item is-active" data-filter-target="all">{{ section.settings.all_tab_label | escape }}</button>
+          {%- endif -%}
+          {%- for block in section.blocks -%}
+            {%- assign fcollection = collections[block.settings.collection] -%}
+            {%- assign ftitle = block.settings.title | default: fcollection.title | default: 'Categoría' -%}
+            <button type="button"
+                    class="MenuFilter__Item {% if section.settings.show_all_tab == false and forloop.first %}is-active{% endif %}"
+                    data-filter-target="cat-{{ block.id }}">
+              {{- ftitle | escape -}}
+            </button>
+          {%- endfor -%}
+        </div>
+      </div>
+    </div>
+  {%- endif -%}
+
+  <div class="Container">
+    {%- if section.blocks.size == 0 -%}
+      <p class="MenuCategory__Empty">Agrega categorías desde el personalizador para mostrar tu menú.</p>
+    {%- endif -%}
+
+    {%- for block in section.blocks -%}
+      {%- assign collection = collections[block.settings.collection] -%}
+      {%- assign cat_title = block.settings.title | default: collection.title | default: 'Categoría' -%}
+
+      <div class="MenuCategory" id="cat-{{ block.id }}" data-menu-category {{ block.shopify_attributes }}>
+        <div class="MenuCategory__Header">
+          <h3 class="MenuCategory__Title Heading u-h2">{{ cat_title | escape }}</h3>
+          {%- if block.settings.description != blank -%}
+            <p class="MenuCategory__Desc">{{ block.settings.description | escape }}</p>
+          {%- endif -%}
+        </div>
+
+        {%- if collection != empty and collection.products_count > 0 -%}
+          <div class="MenuGrid MenuGrid--{{ section.settings.layout_mode }}">
+            {%- for product in collection.products limit: block.settings.products_limit -%}
+              {%- assign selected_variant = product.selected_or_first_available_variant -%}
+
+              <article class="MenuItem" data-menu-item>
+                {%- if section.settings.show_image and product.featured_media -%}
+                  <a class="MenuItem__Media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
+                    <img src="{{ product.featured_media | image_url: width: 400 }}"
+                         srcset="{{ product.featured_media | image_url: width: 200 }} 200w, {{ product.featured_media | image_url: width: 400 }} 400w"
+                         sizes="{{ section.settings.image_size }}px"
+                         width="{{ section.settings.image_size }}" height="{{ section.settings.image_size }}"
+                         loading="lazy"
+                         alt="{{ product.featured_media.alt | default: product.title | escape }}">
+                  </a>
+                {%- endif -%}
+
+                <div class="MenuItem__Body">
+                  <h4 class="MenuItem__Name Heading">
+                    <a href="{{ product.url }}">{{ product.title | escape }}</a>
+                  </h4>
+
+                  {%- if section.settings.show_description and product.description != blank -%}
+                    <p class="MenuItem__Desc">{{ product.description | strip_html | truncatewords: 24 }}</p>
+                  {%- endif -%}
+
+                  {%- comment -%} Selector de tamaños (variantes) {%- endcomment -%}
+                  {%- unless product.has_only_default_variant -%}
+                    <div class="MenuItem__Sizes" role="group" aria-label="Tamaño">
+                      {%- for variant in product.variants -%}
+                        <button type="button"
+                                class="MenuItem__Size {% if variant.id == selected_variant.id %}is-selected{% endif %}"
+                                data-variant-id="{{ variant.id }}"
+                                data-price="{{ variant.price }}"
+                                data-price-formatted="{{ variant.price | money_without_trailing_zeros | strip_html | escape }}"
+                                data-available="{{ variant.available }}"
+                                {% unless variant.available %}disabled{% endunless %}>
+                          {{- variant.title | escape -}}
+                        </button>
+                      {%- endfor -%}
+                    </div>
+                  {%- endunless -%}
+
+                  <div class="MenuItem__Footer">
+                    <div class="MenuItem__Price" data-menu-price>
+                      {%- if product.compare_at_price > product.price -%}
+                        <del>{{ product.compare_at_price | money_without_trailing_zeros }}</del>
+                        <ins>{{ selected_variant.price | money_without_trailing_zeros }}</ins>
+                      {%- elsif product.price_varies -%}
+                        {{ selected_variant.price | money_without_trailing_zeros }}
+                      {%- else -%}
+                        {{ selected_variant.price | money_without_trailing_zeros }}
+                      {%- endif -%}
+                    </div>
+
+                    <button type="button"
+                            class="MenuItem__Add"
+                            data-menu-add
+                            data-variant-id="{{ selected_variant.id }}"
+                            {% unless product.available %}disabled{% endunless %}>
+                      {%- if product.available -%}
+                        {% render 'icon' with 'plus' %}
+                        <span>{{ section.settings.add_button_label | escape }}</span>
+                      {%- else -%}
+                        <span>{{ 'product.form.sold_out' | t }}</span>
+                      {%- endif -%}
+                    </button>
+                  </div>
+                </div>
+              </article>
+            {%- endfor -%}
+          </div>
+        {%- else -%}
+          <p class="MenuCategory__Empty">
+            {%- if collection == empty -%}
+              Selecciona una colección para esta categoría en el personalizador.
+            {%- else -%}
+              Esta categoría no tiene productos por el momento.
+            {%- endif -%}
+          </p>
+        {%- endif -%}
+      </div>
+    {%- endfor -%}
+  </div>
+</section>
+
+<script>
+  (function () {
+    var root = document.getElementById('Menu-{{ uid }}');
+    if (!root) return;
+
+    var settings = {};
+    try { settings = JSON.parse(root.getAttribute('data-settings')) || {}; } catch (e) {}
+
+    var cartAddUrl = (window.routes && window.routes.cartAddUrl ? window.routes.cartAddUrl : '/cart/add') + '.js';
+
+    // ── Filtros de categoría ──────────────────────────────────────────────
+    var filterBar = root.querySelector('[data-menu-filter]');
+    if (filterBar) {
+      filterBar.addEventListener('click', function (e) {
+        var btn = e.target.closest('.MenuFilter__Item');
+        if (!btn) return;
+
+        filterBar.querySelectorAll('.MenuFilter__Item').forEach(function (b) { b.classList.remove('is-active'); });
+        btn.classList.add('is-active');
+
+        var target = btn.getAttribute('data-filter-target');
+        var categories = root.querySelectorAll('[data-menu-category]');
+
+        if (target === 'all') {
+          categories.forEach(function (c) { c.style.display = ''; });
+          root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          {% comment %} Filtrado: muestra solo la categoría y hace scroll {% endcomment %}
+          {% if section.settings.filter_behavior == 'scroll' %}
+          categories.forEach(function (c) { c.style.display = ''; });
+          var el = document.getElementById(target);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          {% else %}
+          categories.forEach(function (c) { c.style.display = (c.id === target) ? '' : 'none'; });
+          {% endif %}
+        }
+      });
+    }
+
+    // ── Selector de tamaños ───────────────────────────────────────────────
+    root.addEventListener('click', function (e) {
+      var sizeBtn = e.target.closest('.MenuItem__Size');
+      if (!sizeBtn || sizeBtn.disabled) return;
+
+      var item = sizeBtn.closest('[data-menu-item]');
+      if (!item) return;
+
+      item.querySelectorAll('.MenuItem__Size').forEach(function (b) { b.classList.remove('is-selected'); });
+      sizeBtn.classList.add('is-selected');
+
+      var addBtn = item.querySelector('[data-menu-add]');
+      if (addBtn) addBtn.setAttribute('data-variant-id', sizeBtn.getAttribute('data-variant-id'));
+
+      var priceEl = item.querySelector('[data-menu-price]');
+      var formatted = sizeBtn.getAttribute('data-price-formatted');
+      if (priceEl && formatted) priceEl.textContent = formatted;
+    });
+
+    // ── Añadir al carrito (AJAX) ──────────────────────────────────────────
+    function openCartDrawer() {
+      var opener = document.querySelector('[data-action="open-drawer"][data-drawer-id="sidebar-cart"]');
+      if (opener) { opener.click(); }
+    }
+
+    root.addEventListener('click', function (e) {
+      var addBtn = e.target.closest('[data-menu-add]');
+      if (!addBtn || addBtn.disabled) return;
+
+      var variantId = addBtn.getAttribute('data-variant-id');
+      if (!variantId) return;
+
+      var originalHtml = addBtn.innerHTML;
+      addBtn.classList.add('is-loading');
+      addBtn.setAttribute('disabled', 'disabled');
+
+      fetch(cartAddUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ id: variantId, quantity: 1 })
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error('add_error');
+          return res.json();
+        })
+        .then(function (line) {
+          addBtn.classList.remove('is-loading');
+          addBtn.classList.add('is-added');
+          addBtn.innerHTML = '<span>{{ section.settings.added_button_label | default: 'Agregado' }}</span>';
+
+          // Refresca el mini-cart del tema y notifica a otros scripts (Meta Pixel, etc.)
+          document.documentElement.dispatchEvent(new CustomEvent('cart:refresh', { bubbles: true }));
+          document.documentElement.dispatchEvent(new CustomEvent('product:added', {
+            bubbles: true,
+            detail: { variant: { id: variantId }, quantity: 1 }
+          }));
+
+          if (settings.showDrawerAfterAdd) {
+            setTimeout(openCartDrawer, 250);
+          }
+
+          setTimeout(function () {
+            addBtn.classList.remove('is-added');
+            addBtn.innerHTML = originalHtml;
+            addBtn.removeAttribute('disabled');
+          }, 1600);
+        })
+        .catch(function () {
+          addBtn.classList.remove('is-loading');
+          addBtn.removeAttribute('disabled');
+          addBtn.innerHTML = originalHtml;
+          alert('No se pudo agregar el producto. Intenta de nuevo.');
+        });
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Menú de productos",
+  "class": "shopify-section--menu",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Encabezado"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "Texto superior",
+      "default": "Nuestra carta"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Título",
+      "default": "Menú"
+    },
+    {
+      "type": "richtext",
+      "id": "description",
+      "label": "Descripción"
+    },
+    {
+      "type": "select",
+      "id": "heading_alignment",
+      "label": "Alineación del encabezado",
+      "options": [
+        { "value": "left", "label": "Izquierda" },
+        { "value": "center", "label": "Centro" }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "header",
+      "content": "Barra de filtros"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_filter",
+      "label": "Mostrar barra de categorías",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_filter",
+      "label": "Barra fija al hacer scroll",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_all_tab",
+      "label": "Mostrar pestaña \"Todo\"",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "all_tab_label",
+      "label": "Texto de la pestaña \"Todo\"",
+      "default": "Todo"
+    },
+    {
+      "type": "select",
+      "id": "filter_behavior",
+      "label": "Comportamiento del filtro",
+      "options": [
+        { "value": "scroll", "label": "Desplazar a la categoría" },
+        { "value": "isolate", "label": "Mostrar solo la categoría" }
+      ],
+      "default": "scroll"
+    },
+    {
+      "type": "header",
+      "content": "Diseño de tarjetas"
+    },
+    {
+      "type": "select",
+      "id": "layout_mode",
+      "label": "Diseño",
+      "options": [
+        { "value": "list", "label": "Lista" },
+        { "value": "grid", "label": "Cuadrícula" }
+      ],
+      "default": "list"
+    },
+    {
+      "type": "range",
+      "id": "grid_columns",
+      "label": "Columnas (escritorio, modo cuadrícula)",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "range",
+      "id": "grid_columns_mobile",
+      "label": "Columnas (móvil, modo cuadrícula)",
+      "min": 1,
+      "max": 2,
+      "step": 1,
+      "default": 1
+    },
+    {
+      "type": "checkbox",
+      "id": "show_image",
+      "label": "Mostrar imagen",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "image_size",
+      "label": "Tamaño de imagen (modo lista)",
+      "min": 80,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "default": 110
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "Mostrar descripción",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "label": "Redondeo de tarjetas",
+      "min": 0,
+      "max": 28,
+      "step": 2,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "text",
+      "id": "add_button_label",
+      "label": "Texto del botón agregar",
+      "default": "Agregar"
+    },
+    {
+      "type": "text",
+      "id": "added_button_label",
+      "label": "Texto de confirmación al agregar",
+      "default": "Agregado"
+    },
+    {
+      "type": "header",
+      "content": "Colores"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Color de acento (botones/pestañas)",
+      "info": "Si se deja vacío usa el color de botón del tema."
+    },
+    {
+      "type": "color",
+      "id": "accent_text_color",
+      "label": "Color del texto sobre acento"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "category",
+      "name": "Categoría",
+      "settings": [
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "Colección (categoría)",
+          "info": "Crea o edita las categorías creando colecciones en Productos → Colecciones."
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Título de la categoría",
+          "info": "Si se deja vacío se usa el nombre de la colección."
+        },
+        {
+          "type": "text",
+          "id": "description",
+          "label": "Descripción de la categoría"
+        },
+        {
+          "type": "range",
+          "id": "products_limit",
+          "label": "Máximo de productos a mostrar",
+          "min": 4,
+          "max": 50,
+          "step": 1,
+          "default": 24
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Menú de productos",
+      "category": "Menú",
+      "blocks": [
+        { "type": "category" },
+        { "type": "category" }
+      ]
+    }
+  ]
+}
+{% endschema %}

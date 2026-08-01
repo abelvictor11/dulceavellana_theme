@@ -1,0 +1,385 @@
+<!doctype html>
+
+<html class="no-js" lang="{{ request.locale.iso_code }}">
+  <head>
+   <!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-WP88HZDC');</script>
+<!-- End Google Tag Manager -->
+    <meta charset="utf-8"> 
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, height=device-height">
+    <meta name="theme-color" content="{{ settings.accent_color }}">
+
+    <title>
+      {{ page_title }}{% if current_tags %}{% assign meta_tags = current_tags | join: ', ' %} &ndash; {{ 'general.meta.tags' | t: tags: meta_tags }}{% endif %}{% if current_page != 1 %} &ndash; {{ 'general.meta.page' | t: page: current_page }}{% endif %}{% unless page_title contains shop.name %} &ndash; {{ shop.name }}{% endunless %}
+    </title>
+
+    {%- if page_description -%}
+      <meta name="description" content="{{ page_description | escape }}">
+    {%- endif -%}
+
+    <link rel="canonical" href="{{ canonical_url }}">
+
+    {%- if settings.favicon -%}
+      <link rel="shortcut icon" href="{{ settings.favicon | img_url: '96x' }}" type="image/png">
+    {%- endif -%}
+
+    {% render 'social-meta-tags' %}
+    {% render 'css-variables' %}
+
+    {{ content_for_header }}
+
+    <link rel="stylesheet" href="{{ 'theme.css' | asset_url }}">
+
+    <script>
+      {%- if request.page_type == 'policy' -%}
+        document.addEventListener('DOMContentLoaded', function() {
+          document.querySelector('.shopify-policy__title').classList.add('PageHeader', 'Heading', 'u-h1');
+          document.querySelector('.shopify-policy__body').classList.add('Rte');
+        });
+      {%- endif -%}
+
+      // This allows to expose several variables to the global scope, to be used in scripts
+      window.theme = {
+        pageType: {{ request.page_type | json }},
+        moneyFormat: {{ shop.money_format | json }},
+        moneyWithCurrencyFormat: {{ shop.money_with_currency_format | json }},
+        currencyCodeEnabled: {{ settings.currency_code_enabled | json }},
+        productImageSize: {{ settings.product_image_size | json }},
+        searchMode: {{ settings.search_mode | json }},
+        showPageTransition: {{ settings.show_page_transition | json }},
+        showElementStaggering: {{ settings.show_element_staggering | json }},
+        showImageZooming: {{ settings.show_image_zooming | json }}
+      };
+
+      window.routes = {
+        rootUrl: {{ routes.root_url | json }},
+        rootUrlWithoutSlash: {% if routes.root_url == '/' %}''{% else %}{{ routes.root_url | json }}{% endif %},
+        cartUrl: {{ routes.cart_url | json }},
+        cartAddUrl: {{ routes.cart_add_url | json }},
+        cartChangeUrl: {{ routes.cart_change_url | json }},
+        searchUrl: {{ routes.search_url | json }},
+        productRecommendationsUrl: {{ routes.product_recommendations_url | json }}
+      };
+
+      window.languages = {
+        cartAddNote: {{ 'cart.general.add_note' | t | json }},
+        cartEditNote: {{ 'cart.general.edit_note' | t | json }},
+        productImageLoadingError: {{ 'product.slideshow.image_loading_error' | t | json }},
+        productFormAddToCart: {% if product.template_suffix == 'pre-order' %}{{ 'product.form.pre_order' | t | json }}{% else %}{{ 'product.form.add_to_cart' | t | json }}{% endif %},
+        productFormUnavailable: {{ 'product.form.unavailable' | t | json }},
+        productFormSoldOut: {{ 'product.form.sold_out' | t | json }},
+        shippingEstimatorOneResult: {{ 'cart.shipping_estimator.one_result_title' | t | json }},
+        shippingEstimatorMoreResults: {{ 'cart.shipping_estimator.more_results_title' | t | json }},
+        shippingEstimatorNoResults: {{ 'cart.shipping_estimator.no_results_title' | t | json }}
+      };
+
+      window.lazySizesConfig = {
+        loadHidden: false,
+        hFac: 0.5,
+        expFactor: 2,
+        ricTimeout: 150,
+        lazyClass: 'Image--lazyLoad',
+        loadingClass: 'Image--lazyLoading',
+        loadedClass: 'Image--lazyLoaded'
+      };
+
+      document.documentElement.className = document.documentElement.className.replace('no-js', 'js');
+      document.documentElement.style.setProperty('--window-height', window.innerHeight + 'px');
+
+      // We do a quick detection of some features (we could use Modernizr but for so little...)
+      (function() {
+        document.documentElement.className += ((window.CSS && window.CSS.supports('(position: sticky) or (position: -webkit-sticky)')) ? ' supports-sticky' : ' no-supports-sticky');
+        document.documentElement.className += (window.matchMedia('(-moz-touch-enabled: 1), (hover: none)')).matches ? ' no-supports-hover' : ' supports-hover';
+      }());
+
+      {% if request.page_type == 'captcha' %}
+        setTimeout(function() {
+          window.scrollTo(0,0);
+        }, 250)
+      {% endif %}
+    </script>
+
+    <script src="{{ 'lazysizes.min.js' | asset_url }}" async></script>
+
+    {%- if template == 'customers/addresses' -%}
+      <script src="{{ 'shopify_common.js' | shopify_asset_url }}" defer></script>
+      <script src="{{ 'customer_area.js' | shopify_asset_url }}" defer></script>
+    {%- endif -%}
+
+    <script src="{{ 'libs.min.js' | asset_url }}" defer></script>
+    <script src="{{ 'theme.js' | asset_url }}" defer></script>
+    <script src="{{ 'custom.js' | asset_url }}" defer></script>
+
+    <script>
+      (function () {
+        window.onpageshow = function() {
+          if (window.theme.showPageTransition) {
+            var pageTransition = document.querySelector('.PageTransition');
+
+            if (pageTransition) {
+              pageTransition.style.visibility = 'visible';
+              pageTransition.style.opacity = '0';
+            }
+          }
+
+          // When the page is loaded from the cache, we have to reload the cart content
+          document.documentElement.dispatchEvent(new CustomEvent('cart:refresh', {
+            bubbles: true
+          }));
+        };
+      })();
+    </script>
+
+    {% render 'microdata-schema' %}
+   
+<!-- Meta Pixel: eventos custom con variant_id -->
+<script>
+(function () {
+  'use strict';
+
+  // ─── Utilidades ────────────────────────────────────────────────────────────
+
+  // Espera a que fbq exista usando MutationObserver en script tags si tarda,
+  // con timeout máximo de 5s para no bloquear indefinidamente.
+  function waitForFbq(cb) {
+    var attempts = 0;
+    var maxAttempts = 25; // 25 x 200ms = 5s máximo
+    function check() {
+      if (typeof fbq !== 'undefined' && typeof fbq.callMethod === 'function') {
+        cb();
+      } else if (attempts < maxAttempts) {
+        attempts++;
+        setTimeout(check, 200);
+      }
+      // Si supera 5s, no ejecuta — evita callbacks huérfanos
+    }
+    check();
+  }
+
+  // ─── INTERCEPTOR: bloquea VC/ATC de Shopify con content_type=product_group ─
+  function installFbqInterceptor() {
+    if (window.__da_fbq_intercepted) return;
+    window.__da_fbq_intercepted = true;
+
+    var _original = window.fbq;
+    var _wrapper = function () {
+      try {
+        if (
+          arguments[0] === 'track' &&
+          (arguments[1] === 'ViewContent' || arguments[1] === 'AddToCart') &&
+          (arguments[2] || {}).content_type === 'product_group'
+        ) {
+          return; // bloquea duplicados de Shopify partner
+        }
+      } catch (e) { /* no-op */ }
+      return _original.apply(this, arguments);
+    };
+    // Copia propiedades internas del Pixel (callMethod, queue, loaded, version)
+    for (var k in _original) {
+      if (Object.prototype.hasOwnProperty.call(_original, k)) {
+        _wrapper[k] = _original[k];
+      }
+    }
+    window.fbq = _wrapper;
+  }
+
+  // ─── INITIATE CHECKOUT: listener global en botones con data-fbq-initiate-checkout
+  document.addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest
+      ? e.target.closest('[data-fbq-initiate-checkout]')
+      : null;
+    if (!btn) return;
+    if (typeof fbq === 'undefined') return;
+    fbq('track', 'InitiateCheckout', {
+      currency: 'COP',
+      num_items: {{ cart.item_count }},
+      value: {{ cart.total_price | divided_by: 100.0 }}
+    });
+  });
+
+  // ─── PÁGINA DE PRODUCTO ─────────────────────────────────────────────────────
+  {% if request.page_type == 'product' %}
+  var VARIANTS = {
+    {% for v in product.variants %}
+    "{{ v.id }}": {
+      price: {{ v.price | divided_by: 100.0 }},
+      name: {{ product.title | append: ' - ' | append: v.title | json }}
+    }{% unless forloop.last %},{% endunless %}
+    {% endfor %}
+  };
+
+  function getCurrentVariantId() {
+    var el = document.querySelector('[name="id"]');
+    if (el && el.value) return String(el.value);
+    var p = new URLSearchParams(location.search);
+    if (p.get('variant')) return String(p.get('variant'));
+    return "{{ product.selected_or_first_available_variant.id }}";
+  }
+
+  function trackViewContent(variantId) {
+    var info = VARIANTS[variantId] || {
+      price: {{ product.price | divided_by: 100.0 }},
+      name: {{ product.title | json }}
+    };
+    fbq('track', 'ViewContent', {
+      content_ids: [String(variantId), "{{ product.id }}"],
+      content_type: 'product',
+      content_name: info.name,
+      value: parseFloat(info.price),
+      currency: 'COP'
+    });
+  }
+
+  function trackAddToCart(variantId, qty) {
+    var q = qty || 1;
+    var info = VARIANTS[variantId] || {
+      price: {{ product.price | divided_by: 100.0 }},
+      name: {{ product.title | json }}
+    };
+    fbq('track', 'AddToCart', {
+      content_ids: [String(variantId), "{{ product.id }}"],
+      content_type: 'product',
+      content_name: info.name,
+      value: parseFloat(info.price) * q,
+      currency: 'COP',
+      contents: [{ id: String(variantId), quantity: q, item_price: parseFloat(info.price) }],
+      num_items: q
+    });
+  }
+
+  var _vcFired = false;
+
+  function initProductTracking() {
+    installFbqInterceptor();
+
+    // ViewContent inicial (solo una vez por carga)
+    if (!_vcFired) {
+      _vcFired = true;
+      trackViewContent(getCurrentVariantId());
+    }
+
+    // VC al cambiar variante via evento nativo del tema
+    document.addEventListener('variant:changed', function (e) {
+      var variant = e.detail && e.detail.variant;
+      if (variant) trackViewContent(String(variant.id));
+    });
+
+    // Fallback: VC al cambiar el select/input de variante
+    document.addEventListener('change', function (e) {
+      if (!e.target) return;
+      if (
+        e.target.name === 'id' ||
+        (e.target.closest && e.target.closest('form[action^="/cart/add"]') && e.target.tagName === 'SELECT')
+      ) {
+        trackViewContent(getCurrentVariantId());
+      }
+    });
+
+    // ATC via submit del formulario
+    document.addEventListener('submit', function (e) {
+      var form = e.target && e.target.closest
+        ? e.target.closest('form[action^="/cart/add"]')
+        : null;
+      if (!form) return;
+      var variantId = (form.querySelector('[name="id"]') || {}).value || getCurrentVariantId();
+      var qtyEl = form.querySelector('[name="quantity"]');
+      var qty = qtyEl ? (parseInt(qtyEl.value, 10) || 1) : 1;
+      trackAddToCart(String(variantId), qty);
+    });
+
+    // ATC via evento del tema (AJAX cart)
+    document.addEventListener('product:added', function (e) {
+      var variant = e.detail && e.detail.variant;
+      var qty = (e.detail && e.detail.quantity) || 1;
+      if (variant) trackAddToCart(String(variant.id), qty);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { waitForFbq(initProductTracking); });
+  } else {
+    waitForFbq(initProductTracking);
+  }
+  {% endif %}
+
+})();
+</script>
+<!-- /Meta Pixel eventos custom -->
+
+  </head>
+
+  {%- capture classes -%}features--heading-{{ settings.heading_size }}{%- endcapture -%}
+
+  {%- if settings.uppercase_heading -%}
+    {%- assign classes = classes | append: ' features--heading-uppercase' -%}
+  {%- endif -%}
+
+  {%- if settings.product_show_price_on_hover -%}
+    {%- assign classes = classes | append: ' features--show-price-on-hover' -%}
+  {%- endif -%}
+
+  {%- if settings.show_page_transition -%}
+    {%- assign classes = classes | append: ' features--show-page-transition' -%}
+  {%- endif -%}
+
+  {%- if settings.show_button_transition -%}
+    {%- assign classes = classes | append: ' features--show-button-transition' -%}
+  {%- endif -%}
+
+  {%- if settings.show_image_zooming -%}
+    {%- assign classes = classes | append: ' features--show-image-zooming' -%}
+  {%- endif -%}
+
+  {%- if settings.show_element_staggering -%}
+    {%- assign classes = classes | append: ' features--show-element-staggering' -%}
+  {%- endif -%}
+
+  <body class="prestige--v4 {{ classes }} {% if template.directory %}template-{{ template.directory | handle }}{% endif %} template-{{ template.name | handle }}">
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WP88HZDC"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+    {%- comment -%}Common SVG definitions that we are re-using in several places{%- endcomment -%}
+    <svg class="u-visually-hidden">
+      <linearGradient id="rating-star-gradient-half">
+        <stop offset="50%" stop-color="var(--product-star-rating)" />
+        <stop offset="50%" stop-color="var(--text-color-light)" />
+      </linearGradient>
+    </svg>
+
+    <a class="PageSkipLink u-visually-hidden" href="#main">{{ 'header.navigation.skip_to_content' | t }}</a>
+    <span class="LoadingBar"></span>
+    <div class="PageOverlay"></div>
+
+    {%- if settings.show_page_transition -%}
+      <div class="PageTransition"></div>
+    {%- endif -%}
+
+    {% section 'popup' %}
+    {% section 'sidebar-menu' %}
+
+    {%- if template != 'cart' -%}
+      {% render 'cart-drawer' %}
+    {%- endif -%}
+
+    <div class="PageContainer">
+      {% section 'announcement' %}
+      {% section 'header' %}
+
+      <main id="main" role="main">
+        {{ content_for_layout }}
+      </main>
+
+      {% section 'footer' %}
+    </div>
+  
+<!-- **BEGIN** Hextom CTB Integration // Main Include - DO NOT MODIFY -->
+    {% render 'hextom_ctb_main', product: product, customer: customer %}
+    <!-- **END** Hextom CTB Integration // Main Include - DO NOT MODIFY -->
+</body>
+</html>

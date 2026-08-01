@@ -1,0 +1,47 @@
+{% schema %}
+{
+  "name": "Video con sonido",
+  "settings": [
+    {
+      "type": "text",
+      "id": "video_url",
+      "label": "URL del video (formato .mp4)",
+      "default": "https://cdn.shopify.com/s/files/1/XXXX/yourvideo.mp4"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_controls",
+      "label": "Mostrar controles del reproductor",
+      "default": true
+    }
+  ],
+  "presets": [{
+    "name": "Video con sonido"
+  }]
+}
+{% endschema %}
+
+<div class="custom-video-section">
+  <video 
+    id="videoWithSound"
+    {% if section.settings.show_controls %}controls{% endif %}
+    playsinline
+    preload="auto"
+    width="100%"
+  >
+    <source src="{{ section.settings.video_url }}" type="video/mp4">
+    Tu navegador no soporta la reproducción de este video.
+  </video>
+</div>
+
+<style>
+.custom-video-section {
+  max-width: 100%;
+  overflow: hidden;
+}
+video {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+</style>
