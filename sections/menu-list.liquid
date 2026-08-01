@@ -542,22 +542,25 @@ MENU LIST — Menú tipo "MenuApp" totalmente modulable desde el personalizador.
       "default": "list"
     },
     {
-      "type": "range",
+      "type": "select",
       "id": "grid_columns",
       "label": "Columnas (escritorio, modo cuadrícula)",
-      "min": 2,
-      "max": 4,
-      "step": 1,
-      "default": 3
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "3"
     },
     {
-      "type": "range",
+      "type": "select",
       "id": "grid_columns_mobile",
       "label": "Columnas (móvil, modo cuadrícula)",
-      "min": 1,
-      "max": 2,
-      "step": 1,
-      "default": 1
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "1"
     },
     {
       "type": "checkbox",
@@ -571,7 +574,7 @@ MENU LIST — Menú tipo "MenuApp" totalmente modulable desde el personalizador.
       "label": "Tamaño de imagen (modo lista)",
       "min": 80,
       "max": 160,
-      "step": 4,
+      "step": 2,
       "unit": "px",
       "default": 110
     },
