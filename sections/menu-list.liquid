@@ -398,6 +398,18 @@
           {%- assign additions_help_key = additions_prefix | append: 'additions_help' -%}
           {%- assign additions_min_key = additions_prefix | append: 'additions_min' -%}
           {%- assign additions_max_key = additions_prefix | append: 'additions_max' -%}
+          {%- assign secondary_additions_source = category_additions -%}
+          {%- assign secondary_additions_prefix = 'secondary_' -%}
+          {%- if block.settings.secondary_additions_behavior == 'custom' -%}
+            {%- assign secondary_additions_source = block.settings -%}
+            {%- assign secondary_additions_prefix = 'custom_secondary_' -%}
+          {%- elsif block.settings.secondary_additions_behavior == 'none' -%}
+            {%- assign secondary_additions_source = nil -%}
+          {%- endif -%}
+          {%- assign secondary_title_key = secondary_additions_prefix | append: 'additions_title' -%}
+          {%- assign secondary_help_key = secondary_additions_prefix | append: 'additions_help' -%}
+          {%- assign secondary_min_key = secondary_additions_prefix | append: 'additions_min' -%}
+          {%- assign secondary_max_key = secondary_additions_prefix | append: 'additions_max' -%}
           <article class="MenuItem" data-menu-item {{ block.shopify_attributes }}>
             <button type="button" class="MenuItem__Button" data-menu-open="MenuDialog-{{ uid }}-{{ block.id }}" aria-haspopup="dialog" aria-controls="MenuDialog-{{ uid }}-{{ block.id }}">
               <span class="MenuItem__Media">
@@ -466,7 +478,7 @@
                     </fieldset>
                   {%- endif -%}
                   {%- if additions_source != nil -%}
-                    <fieldset class="MenuDialog__Options" data-menu-additions data-min="{{ additions_source[additions_min_key] | default: 0 }}" data-max="{{ additions_source[additions_max_key] | default: 1 }}">
+                    <fieldset class="MenuDialog__Options" data-menu-additions data-additions-group="primary" data-min="{{ additions_source[additions_min_key] | default: 0 }}" data-max="{{ additions_source[additions_max_key] | default: 1 }}">
                       <legend class="MenuDialog__OptionsTitle Heading">{{ additions_source[additions_title_key] | default: 'Personaliza tu plato' | escape }}</legend>
                       {%- if additions_source[additions_help_key] != blank -%}<p>{{ additions_source[additions_help_key] | escape }}</p>{%- endif -%}
                       {%- for index in (1..8) -%}
@@ -478,6 +490,24 @@
                       {%- endfor -%}
                       <p data-menu-selection-status aria-live="polite"></p>
                     </fieldset>
+                  {%- endif -%}
+                  {%- if secondary_additions_source != nil -%}
+                    {%- assign secondary_has_options = false -%}
+                    {%- for index in (1..8) -%}{%- assign key = secondary_additions_prefix | append: 'addition_' | append: index | append: '_name' -%}{%- if secondary_additions_source[key] != blank -%}{%- assign secondary_has_options = true -%}{%- endif -%}{%- endfor -%}
+                    {%- if secondary_has_options -%}
+                      <fieldset class="MenuDialog__Options" data-menu-additions data-additions-group="secondary" data-min="{{ secondary_additions_source[secondary_min_key] | default: 0 }}" data-max="{{ secondary_additions_source[secondary_max_key] | default: 3 }}">
+                        <legend class="MenuDialog__OptionsTitle Heading">{{ secondary_additions_source[secondary_title_key] | default: 'Adiciones especiales' | escape }}</legend>
+                        {%- if secondary_additions_source[secondary_help_key] != blank -%}<p>{{ secondary_additions_source[secondary_help_key] | escape }}</p>{%- endif -%}
+                        {%- for index in (1..8) -%}
+                          {%- assign name_key = secondary_additions_prefix | append: 'addition_' | append: index | append: '_name' -%}
+                          {%- assign price_key = secondary_additions_prefix | append: 'addition_' | append: index | append: '_price' -%}
+                          {%- assign addition_name = secondary_additions_source[name_key] -%}
+                          {%- assign addition_price = secondary_additions_source[price_key] | default: 0 -%}
+                          {%- if addition_name != blank -%}<label class="MenuDialog__Option"><span><input type="checkbox" data-menu-addition data-price="{{ addition_price }}"> {{ addition_name | escape }}</span><span class="MenuDialog__OptionPrice" data-format-price="{{ addition_price }}" data-addition-price></span></label>{%- endif -%}
+                        {%- endfor -%}
+                        <p data-menu-selection-status aria-live="polite"></p>
+                      </fieldset>
+                    {%- endif -%}
                   {%- endif -%}
                   <div class="MenuDialog__Price" data-menu-total data-base-price="{{ block.settings.base_price | default: 0 }}" aria-live="polite"></div>
                 </div>
@@ -529,8 +559,8 @@
         var selectedPresentation = dialog.querySelector('[data-menu-presentation]:checked');
         var totalNode = dialog.querySelector('[data-menu-total]');
         var total = selectedPresentation ? Number(selectedPresentation.dataset.price) : Number(totalNode && totalNode.dataset.basePrice);
-        var group = dialog.querySelector('[data-menu-additions]');
-        if (group) {
+        var groups = dialog.querySelectorAll('[data-menu-additions]');
+        groups.forEach(function (group) {
           var limits = normalizeLimits(group);
           var additions = Array.prototype.slice.call(group.querySelectorAll('[data-menu-addition]'));
           var selected = additions.filter(function (input) { return input.checked; });
@@ -538,7 +568,7 @@
           additions.forEach(function (input) { input.disabled = !input.checked && selected.length >= limits.max; });
           var status = group.querySelector('[data-menu-selection-status]');
           if (status) status.textContent = selected.length < limits.min ? 'Selecciona al menos ' + limits.min : selected.length + ' de ' + limits.max + ' seleccionadas';
-        }
+        });
         if (totalNode) totalNode.textContent = 'Total estimado: ' + formatMoney(total);
       }
       function resetConfigurator(dialog) {
@@ -663,7 +693,20 @@
         { "type": "text", "id": "addition_5_name", "label": "Adición 5" }, { "type": "number", "id": "addition_5_price", "label": "Precio adicional 5", "default": 0 },
         { "type": "text", "id": "addition_6_name", "label": "Adición 6" }, { "type": "number", "id": "addition_6_price", "label": "Precio adicional 6", "default": 0 },
         { "type": "text", "id": "addition_7_name", "label": "Adición 7" }, { "type": "number", "id": "addition_7_price", "label": "Precio adicional 7", "default": 0 },
-        { "type": "text", "id": "addition_8_name", "label": "Adición 8" }, { "type": "number", "id": "addition_8_price", "label": "Precio adicional 8", "default": 0 }
+        { "type": "text", "id": "addition_8_name", "label": "Adición 8" }, { "type": "number", "id": "addition_8_price", "label": "Precio adicional 8", "default": 0 },
+        { "type": "header", "content": "Adiciones especiales" },
+        { "type": "text", "id": "secondary_additions_title", "label": "Título", "default": "Adiciones especiales" },
+        { "type": "text", "id": "secondary_additions_help", "label": "Texto de ayuda" },
+        { "type": "range", "id": "secondary_additions_min", "label": "Mínimo", "min": 0, "max": 8, "step": 1, "default": 0 },
+        { "type": "range", "id": "secondary_additions_max", "label": "Máximo", "min": 1, "max": 8, "step": 1, "default": 3 },
+        { "type": "text", "id": "secondary_addition_1_name", "label": "Especial 1" }, { "type": "number", "id": "secondary_addition_1_price", "label": "Precio especial 1", "default": 0 },
+        { "type": "text", "id": "secondary_addition_2_name", "label": "Especial 2" }, { "type": "number", "id": "secondary_addition_2_price", "label": "Precio especial 2", "default": 0 },
+        { "type": "text", "id": "secondary_addition_3_name", "label": "Especial 3" }, { "type": "number", "id": "secondary_addition_3_price", "label": "Precio especial 3", "default": 0 },
+        { "type": "text", "id": "secondary_addition_4_name", "label": "Especial 4" }, { "type": "number", "id": "secondary_addition_4_price", "label": "Precio especial 4", "default": 0 },
+        { "type": "text", "id": "secondary_addition_5_name", "label": "Especial 5" }, { "type": "number", "id": "secondary_addition_5_price", "label": "Precio especial 5", "default": 0 },
+        { "type": "text", "id": "secondary_addition_6_name", "label": "Especial 6" }, { "type": "number", "id": "secondary_addition_6_price", "label": "Precio especial 6", "default": 0 },
+        { "type": "text", "id": "secondary_addition_7_name", "label": "Especial 7" }, { "type": "number", "id": "secondary_addition_7_price", "label": "Precio especial 7", "default": 0 },
+        { "type": "text", "id": "secondary_addition_8_name", "label": "Especial 8" }, { "type": "number", "id": "secondary_addition_8_price", "label": "Precio especial 8", "default": 0 }
       ]
     },
     {
@@ -699,6 +742,20 @@
         { "type": "text", "id": "custom_addition_6_name", "label": "Adición propia 6" }, { "type": "number", "id": "custom_addition_6_price", "label": "Precio propio 6", "default": 0 },
         { "type": "text", "id": "custom_addition_7_name", "label": "Adición propia 7" }, { "type": "number", "id": "custom_addition_7_price", "label": "Precio propio 7", "default": 0 },
         { "type": "text", "id": "custom_addition_8_name", "label": "Adición propia 8" }, { "type": "number", "id": "custom_addition_8_price", "label": "Precio propio 8", "default": 0 },
+        { "type": "header", "content": "Adiciones especiales del ítem" },
+        { "type": "select", "id": "secondary_additions_behavior", "label": "Comportamiento de especiales", "options": [{ "value": "inherit", "label": "Heredar de categoría" }, { "value": "none", "label": "Sin especiales" }, { "value": "custom", "label": "Especiales propias" }], "default": "inherit" },
+        { "type": "text", "id": "custom_secondary_additions_title", "label": "Título propio", "default": "Adiciones especiales" },
+        { "type": "text", "id": "custom_secondary_additions_help", "label": "Ayuda propia" },
+        { "type": "range", "id": "custom_secondary_additions_min", "label": "Mínimo propio", "min": 0, "max": 8, "step": 1, "default": 0 },
+        { "type": "range", "id": "custom_secondary_additions_max", "label": "Máximo propio", "min": 1, "max": 8, "step": 1, "default": 3 },
+        { "type": "text", "id": "custom_secondary_addition_1_name", "label": "Especial propia 1" }, { "type": "number", "id": "custom_secondary_addition_1_price", "label": "Precio especial propio 1", "default": 0 },
+        { "type": "text", "id": "custom_secondary_addition_2_name", "label": "Especial propia 2" }, { "type": "number", "id": "custom_secondary_addition_2_price", "label": "Precio especial propio 2", "default": 0 },
+        { "type": "text", "id": "custom_secondary_addition_3_name", "label": "Especial propia 3" }, { "type": "number", "id": "custom_secondary_addition_3_price", "label": "Precio especial propio 3", "default": 0 },
+        { "type": "text", "id": "custom_secondary_addition_4_name", "label": "Especial propia 4" }, { "type": "number", "id": "custom_secondary_addition_4_price", "label": "Precio especial propio 4", "default": 0 },
+        { "type": "text", "id": "custom_secondary_addition_5_name", "label": "Especial propia 5" }, { "type": "number", "id": "custom_secondary_addition_5_price", "label": "Precio especial propio 5", "default": 0 },
+        { "type": "text", "id": "custom_secondary_addition_6_name", "label": "Especial propia 6" }, { "type": "number", "id": "custom_secondary_addition_6_price", "label": "Precio especial propio 6", "default": 0 },
+        { "type": "text", "id": "custom_secondary_addition_7_name", "label": "Especial propia 7" }, { "type": "number", "id": "custom_secondary_addition_7_price", "label": "Precio especial propio 7", "default": 0 },
+        { "type": "text", "id": "custom_secondary_addition_8_name", "label": "Especial propia 8" }, { "type": "number", "id": "custom_secondary_addition_8_price", "label": "Precio especial propio 8", "default": 0 },
         { "type": "header", "content": "Galería" },
         { "type": "image_picker", "id": "gallery_image_1", "label": "Imagen adicional 1" },
         { "type": "image_picker", "id": "gallery_image_2", "label": "Imagen adicional 2" },

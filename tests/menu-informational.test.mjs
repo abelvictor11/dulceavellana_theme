@@ -34,6 +34,19 @@ test('categories and items expose inherited additions with numeric prices', () =
   assert.equal(item.get('option_1_price').type, 'number');
 });
 
+test('schema exposes an independent secondary additions group', () => {
+  const category = new Map(blockTypes.get('category').settings.filter((s) => s.id).map((s) => [s.id, s]));
+  const item = new Map(blockTypes.get('item').settings.filter((s) => s.id).map((s) => [s.id, s]));
+  for (const id of ['secondary_additions_title', 'secondary_additions_min', 'secondary_additions_max', 'secondary_addition_1_name', 'secondary_addition_8_price']) assert.ok(category.has(id), `missing secondary category setting: ${id}`);
+  for (const id of ['secondary_additions_behavior', 'custom_secondary_additions_title', 'custom_secondary_additions_min', 'custom_secondary_additions_max', 'custom_secondary_addition_1_name', 'custom_secondary_addition_8_price']) assert.ok(item.has(id), `missing secondary item setting: ${id}`);
+  assert.equal(category.get('secondary_additions_max').default, 3);
+  assert.equal(item.get('custom_secondary_additions_max').default, 3);
+});
+
+test('markup and calculator support primary and secondary groups independently', () => {
+  for (const value of ['data-additions-group="primary"', 'data-additions-group="secondary"', "querySelectorAll('[data-menu-additions]')"]) assert.ok(sectionSource.includes(value), `missing multiple group behavior: ${value}`);
+});
+
 test('menu renders an accessible additions calculator contract', () => {
   for (const value of ['type="radio"', 'type="checkbox"', 'data-menu-presentation', 'data-menu-addition', 'data-menu-total', 'data-menu-selection-status', 'aria-live="polite"', 'function formatMoney', 'function updateEstimate', 'function resetConfigurator']) assert.ok(sectionSource.includes(value), `missing additions behavior: ${value}`);
 });
