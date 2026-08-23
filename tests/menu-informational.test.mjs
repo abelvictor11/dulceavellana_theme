@@ -25,6 +25,19 @@ test('menu schema exposes category and manually configurable item blocks', () =>
   }
 });
 
+test('categories and items expose inherited additions with numeric prices', () => {
+  const category = new Map(blockTypes.get('category').settings.filter((s) => s.id).map((s) => [s.id, s]));
+  const item = new Map(blockTypes.get('item').settings.filter((s) => s.id).map((s) => [s.id, s]));
+  for (const id of ['additions_title', 'additions_min', 'additions_max', 'addition_1_name', 'addition_1_price', 'addition_8_name', 'addition_8_price']) assert.ok(category.has(id), `missing category setting: ${id}`);
+  for (const id of ['additions_behavior', 'custom_additions_title', 'custom_additions_min', 'custom_additions_max', 'custom_addition_1_name', 'custom_addition_1_price', 'custom_addition_8_name', 'custom_addition_8_price']) assert.ok(item.has(id), `missing item setting: ${id}`);
+  assert.equal(item.get('base_price').type, 'number');
+  assert.equal(item.get('option_1_price').type, 'number');
+});
+
+test('menu renders an accessible additions calculator contract', () => {
+  for (const value of ['type="radio"', 'type="checkbox"', 'data-menu-presentation', 'data-menu-addition', 'data-menu-total', 'data-menu-selection-status', 'aria-live="polite"', 'function formatMoney', 'function updateEstimate', 'function resetConfigurator']) assert.ok(sectionSource.includes(value), `missing additions behavior: ${value}`);
+});
+
 test('menu section exposes the agreed presentation controls', () => {
   for (const id of [
     'show_filter', 'sticky_filter', 'grid_columns', 'image_size', 'card_radius',
@@ -37,7 +50,7 @@ test('menu section exposes the agreed presentation controls', () => {
 test('menu no longer depends on Shopify catalog or cart objects', () => {
   for (const forbidden of [
     /collections\[/, /collection\.products/, /product\./, /variant/i,
-    /cartAddUrl/, /data-menu-add/, /\/cart\//
+    /cartAddUrl/, /data-menu-add(?!ition)/, /\/cart\//
   ]) {
     assert.doesNotMatch(sectionSource, forbidden);
   }

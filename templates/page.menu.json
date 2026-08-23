@@ -24,15 +24,15 @@
             "badge": "",
             "short_description": "",
             "description": "",
-            "base_price": "",
+            "base_price": 0,
             "option_1_name": "",
-            "option_1_price": "",
+            "option_1_price": 0,
             "option_2_name": "",
-            "option_2_price": "",
+            "option_2_price": 0,
             "option_3_name": "",
-            "option_3_price": "",
+            "option_3_price": 0,
             "option_4_name": "",
-            "option_4_price": ""
+            "option_4_price": 0
           }
         },
         "item-2": {
@@ -42,15 +42,15 @@
             "badge": "",
             "short_description": "",
             "description": "",
-            "base_price": "",
+            "base_price": 0,
             "option_1_name": "",
-            "option_1_price": "",
+            "option_1_price": 0,
             "option_2_name": "",
-            "option_2_price": "",
+            "option_2_price": 0,
             "option_3_name": "",
-            "option_3_price": "",
+            "option_3_price": 0,
             "option_4_name": "",
-            "option_4_price": ""
+            "option_4_price": 0
           }
         },
         "category-2": {
@@ -67,15 +67,15 @@
             "badge": "",
             "short_description": "",
             "description": "",
-            "base_price": "",
+            "base_price": 0,
             "option_1_name": "",
-            "option_1_price": "",
+            "option_1_price": 0,
             "option_2_name": "",
-            "option_2_price": "",
+            "option_2_price": 0,
             "option_3_name": "",
-            "option_3_price": "",
+            "option_3_price": 0,
             "option_4_name": "",
-            "option_4_price": ""
+            "option_4_price": 0
           }
         }
       },
