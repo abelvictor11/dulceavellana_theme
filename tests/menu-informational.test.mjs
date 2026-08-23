@@ -47,6 +47,10 @@ test('markup and calculator support primary and secondary groups independently',
   for (const value of ['data-additions-group="primary"', 'data-additions-group="secondary"', "querySelectorAll('[data-menu-additions]')"]) assert.ok(sectionSource.includes(value), `missing multiple group behavior: ${value}`);
 });
 
+test('desktop modal keeps gallery fixed and scrolls only its content column', () => {
+  for (const value of ['@media (min-width: 701px)', 'Desktop split scroll', 'scrollbar-gutter: stable', 'overscroll-behavior: contain']) assert.ok(sectionSource.includes(value), `missing desktop modal scroll rule: ${value}`);
+});
+
 test('menu renders an accessible additions calculator contract', () => {
   for (const value of ['type="radio"', 'type="checkbox"', 'data-menu-presentation', 'data-menu-addition', 'data-menu-total', 'data-menu-selection-status', 'aria-live="polite"', 'function formatMoney', 'function updateEstimate', 'function resetConfigurator']) assert.ok(sectionSource.includes(value), `missing additions behavior: ${value}`);
 });
