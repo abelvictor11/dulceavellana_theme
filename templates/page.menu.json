@@ -13,39 +13,86 @@
         "category-1": {
           "type": "category",
           "settings": {
-            "title": "",
+            "title": "Categoría",
+            "description": ""
+          }
+        },
+        "item-1": {
+          "type": "item",
+          "settings": {
+            "title": "Nuevo ítem",
+            "badge": "",
+            "short_description": "",
             "description": "",
-            "products_limit": 24
+            "base_price": "",
+            "option_1_name": "",
+            "option_1_price": "",
+            "option_2_name": "",
+            "option_2_price": "",
+            "option_3_name": "",
+            "option_3_price": "",
+            "option_4_name": "",
+            "option_4_price": ""
+          }
+        },
+        "item-2": {
+          "type": "item",
+          "settings": {
+            "title": "Nuevo ítem",
+            "badge": "",
+            "short_description": "",
+            "description": "",
+            "base_price": "",
+            "option_1_name": "",
+            "option_1_price": "",
+            "option_2_name": "",
+            "option_2_price": "",
+            "option_3_name": "",
+            "option_3_price": "",
+            "option_4_name": "",
+            "option_4_price": ""
           }
         },
         "category-2": {
           "type": "category",
           "settings": {
-            "title": "",
+            "title": "Otra categoría",
+            "description": ""
+          }
+        },
+        "item-3": {
+          "type": "item",
+          "settings": {
+            "title": "Nuevo ítem",
+            "badge": "",
+            "short_description": "",
             "description": "",
-            "products_limit": 24
+            "base_price": "",
+            "option_1_name": "",
+            "option_1_price": "",
+            "option_2_name": "",
+            "option_2_price": "",
+            "option_3_name": "",
+            "option_3_price": "",
+            "option_4_name": "",
+            "option_4_price": ""
           }
         }
       },
-      "block_order": ["category-1", "category-2"],
+      "block_order": ["category-1", "item-1", "item-2", "category-2", "item-3"],
       "settings": {
         "subheading": "Nuestra carta",
         "title": "Menú",
         "heading_alignment": "center",
         "show_filter": true,
         "sticky_filter": true,
-        "show_all_tab": true,
-        "all_tab_label": "Todo",
-        "filter_behavior": "scroll",
-        "layout_mode": "list",
-        "grid_columns": "3",
-        "grid_columns_mobile": "1",
-        "show_image": true,
-        "image_size": 110,
-        "show_description": true,
-        "card_radius": 16,
-        "add_button_label": "Agregar",
-        "added_button_label": "Agregado"
+        "general_category_label": "Otros",
+        "grid_columns": "2",
+        "image_size": 132,
+        "card_radius": 18,
+        "modal_radius": 20,
+        "detail_button_label": "Ver detalles",
+        "from_label": "Desde"
       }
     }
   },

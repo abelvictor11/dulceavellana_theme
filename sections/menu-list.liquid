@@ -1,669 +1,620 @@
 {%- comment -%}
-------------------------------------------------------------------------------
-MENU LIST — Menú tipo "MenuApp" totalmente modulable desde el personalizador.
-
-- Cada bloque "Categoría" apunta a una colección de Shopify (el comerciante
-  crea/edita las categorías creando/editando colecciones en el admin).
-- Barra de filtros por categoría (sticky) con navegación por anclas.
-- Tarjetas con imagen, nombre, descripción, precio y selector de tamaños
-  (variantes) + añadir al carrito por AJAX integrado con el drawer del tema.
-------------------------------------------------------------------------------
+  Carta informativa configurable desde el editor del tema.
+  Los bloques de ítem pertenecen a la categoría que los precede.
 {%- endcomment -%}
 
 {%- assign uid = section.id -%}
-
-{%- capture section_settings -%}
-{
-  "showDrawerAfterAdd": {% if settings.cart_type == 'drawer' %}true{% else %}false{% endif %}
-}
-{%- endcapture -%}
+{%- assign has_named_category = false -%}
 
 <style>
   #Menu-{{ uid }} {
-    --menu-card-radius: {{ section.settings.card_radius }}px;
     --menu-accent: {{ section.settings.accent_color | default: settings.button_background }};
     --menu-accent-text: {{ section.settings.accent_text_color | default: settings.button_text_color }};
-    --menu-gap: 24px;
+    --menu-card-radius: {{ section.settings.card_radius }}px;
+    --menu-modal-radius: {{ section.settings.modal_radius }}px;
+    --menu-image-size: {{ section.settings.image_size }}px;
+    --menu-gap: 20px;
   }
+
+  html.MenuModalOpen,
+  html.MenuModalOpen body { overflow: hidden; }
 
   #Menu-{{ uid }} .MenuSection__Intro {
-    text-align: {{ section.settings.heading_alignment }};
     margin-bottom: 32px;
+    text-align: {{ section.settings.heading_alignment }};
   }
-
+  #Menu-{{ uid }} .MenuSection__Title { margin-bottom: 0; }
   #Menu-{{ uid }} .MenuSection__Description {
-    max-width: 640px;
+    max-width: 680px;
     margin: 12px auto 0;
     color: var(--text-color-light);
   }
   #Menu-{{ uid }} .MenuSection__Intro--left .MenuSection__Description { margin-left: 0; }
 
-  /* ---------- Barra de filtros ---------- */
   #Menu-{{ uid }} .MenuFilter {
     position: {% if section.settings.sticky_filter %}sticky{% else %}relative{% endif %};
     top: var(--header-base-height, 80px);
     z-index: 5;
-    background: rgba(var(--background-rgb), 0.92);
-    backdrop-filter: saturate(180%) blur(8px);
-    -webkit-backdrop-filter: saturate(180%) blur(8px);
+    margin-bottom: 28px;
+    border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
-    margin-bottom: var(--menu-gap);
+    background: rgba(var(--background-rgb), 0.94);
+    backdrop-filter: saturate(180%) blur(10px);
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
   }
-
   #Menu-{{ uid }} .MenuFilter__Track {
     display: flex;
     gap: 8px;
     overflow-x: auto;
-    padding: 14px 0;
+    padding: 12px 0;
     scrollbar-width: none;
-    -ms-overflow-style: none;
   }
   #Menu-{{ uid }} .MenuFilter__Track::-webkit-scrollbar { display: none; }
-
   #Menu-{{ uid }} .MenuFilter__Item {
     flex: 0 0 auto;
+    padding: 9px 17px;
     border: 1px solid var(--border-color);
+    border-radius: 999px;
     background: transparent;
     color: var(--text-color);
-    border-radius: 999px;
-    padding: 9px 18px;
-    font-family: var(--heading-font-family);
-    font-size: 13px;
-    letter-spacing: 0.04em;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .06em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    transition: color .2s ease, background .2s ease, border-color .2s ease;
     white-space: nowrap;
   }
-  #Menu-{{ uid }} .MenuFilter__Item.is-active,
-  #Menu-{{ uid }} .MenuFilter__Item:hover {
+  #Menu-{{ uid }} .MenuFilter__Item:hover,
+  #Menu-{{ uid }} .MenuFilter__Item.is-active {
+    border-color: var(--menu-accent);
     background: var(--menu-accent);
     color: var(--menu-accent-text);
-    border-color: var(--menu-accent);
   }
 
-  /* ---------- Categorías ---------- */
-  #Menu-{{ uid }} .MenuCategory { padding-top: 12px; margin-bottom: 48px; scroll-margin-top: 140px; }
+  #Menu-{{ uid }} .MenuCategory {
+    margin-bottom: 52px;
+    scroll-margin-top: 150px;
+  }
+  #Menu-{{ uid }} .MenuCategory:not(:has(.MenuItem)) { display: none; }
   #Menu-{{ uid }} .MenuCategory__Header { margin-bottom: 20px; }
   #Menu-{{ uid }} .MenuCategory__Title { margin: 0; }
-  #Menu-{{ uid }} .MenuCategory__Desc { margin: 6px 0 0; color: var(--text-color-light); max-width: 640px; }
-
-  /* Layout list */
-  #Menu-{{ uid }} .MenuGrid--list { display: flex; flex-direction: column; gap: 16px; }
-  /* Layout grid */
-  #Menu-{{ uid }} .MenuGrid--grid {
+  #Menu-{{ uid }} .MenuCategory__Description {
+    max-width: 680px;
+    margin: 7px 0 0;
+    color: var(--text-color-light);
+  }
+  #Menu-{{ uid }} .MenuGrid {
     display: grid;
     grid-template-columns: repeat({{ section.settings.grid_columns }}, minmax(0, 1fr));
     gap: var(--menu-gap);
   }
 
-  /* ---------- Tarjeta de producto ---------- */
-  #Menu-{{ uid }} .MenuItem {
+  #Menu-{{ uid }} .MenuItem { min-width: 0; }
+  #Menu-{{ uid }} .MenuItem__Button {
+    position: relative;
     display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: calc(var(--menu-image-size) + 28px);
     gap: 16px;
-    background: var(--light-background);
+    align-items: stretch;
+    padding: 14px;
     border: 1px solid var(--border-color);
     border-radius: var(--menu-card-radius);
-    padding: 14px;
-    transition: box-shadow 0.25s ease, transform 0.25s ease;
+    background: var(--light-background);
+    color: var(--text-color);
+    text-align: left;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
   }
-  #Menu-{{ uid }} .MenuItem:hover { box-shadow: 0 12px 30px rgba(var(--text-color-rgb), 0.08); transform: translateY(-2px); }
-
-  #Menu-{{ uid }} .MenuGrid--grid .MenuItem { flex-direction: column; }
-
+  #Menu-{{ uid }} .MenuItem__Button:hover {
+    transform: translateY(-2px);
+    border-color: rgba(var(--text-color-rgb), .22);
+    box-shadow: 0 12px 30px rgba(var(--text-color-rgb), .08);
+  }
+  #Menu-{{ uid }} .MenuItem__Button:focus-visible,
+  #Menu-{{ uid }} .MenuFilter__Item:focus-visible,
+  #Menu-{{ uid }} .MenuDialog button:focus-visible {
+    outline: 3px solid var(--menu-accent);
+    outline-offset: 3px;
+  }
   #Menu-{{ uid }} .MenuItem__Media {
-    flex: 0 0 {{ section.settings.image_size }}px;
-    width: {{ section.settings.image_size }}px;
-    height: {{ section.settings.image_size }}px;
-    border-radius: calc(var(--menu-card-radius) - 4px);
+    flex: 0 0 var(--menu-image-size);
+    width: var(--menu-image-size);
+    height: var(--menu-image-size);
     overflow: hidden;
-    background: rgba(var(--text-color-rgb), 0.04);
+    border-radius: max(0px, calc(var(--menu-card-radius) - 5px));
+    background: rgba(var(--text-color-rgb), .055);
   }
-  #Menu-{{ uid }} .MenuGrid--grid .MenuItem__Media { width: 100%; height: auto; aspect-ratio: 1 / 1; flex: none; }
-  #Menu-{{ uid }} .MenuItem__Media img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-  #Menu-{{ uid }} .MenuItem__Body { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
-  #Menu-{{ uid }} .MenuItem__Name { margin: 0; font-size: 16px; }
-  #Menu-{{ uid }} .MenuItem__Desc {
+  #Menu-{{ uid }} .MenuItem__Media img,
+  #Menu-{{ uid }} .MenuDialog__MainImage img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  #Menu-{{ uid }} .MenuItem__Placeholder {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    color: var(--text-color-light);
+    font-family: var(--heading-font-family);
+    font-size: 22px;
+  }
+  #Menu-{{ uid }} .MenuItem__Content {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-direction: column;
+  }
+  #Menu-{{ uid }} .MenuItem__Badge,
+  #Menu-{{ uid }} .MenuDialog__Badge {
+    align-self: flex-start;
+    margin-bottom: 7px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(var(--text-color-rgb), .07);
+    color: var(--text-color-light);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+  #Menu-{{ uid }} .MenuItem__Name {
+    margin: 0;
+    color: var(--heading-color);
+    font-family: var(--heading-font-family);
+    font-size: 17px;
+    line-height: 1.3;
+  }
+  #Menu-{{ uid }} .MenuItem__Summary {
+    display: -webkit-box;
+    overflow: hidden;
     margin: 6px 0 0;
+    color: var(--text-color-light);
     font-size: 13px;
     line-height: 1.5;
-    color: var(--text-color-light);
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
-    overflow: hidden;
+    -webkit-line-clamp: 2;
   }
-
-  #Menu-{{ uid }} .MenuItem__Sizes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  #Menu-{{ uid }} .MenuItem__Size {
-    border: 1px solid var(--border-color);
-    background: var(--background);
-    color: var(--text-color);
-    border-radius: 8px;
-    padding: 5px 10px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  #Menu-{{ uid }} .MenuItem__Size.is-selected { background: var(--menu-accent); color: var(--menu-accent-text); border-color: var(--menu-accent); }
-  #Menu-{{ uid }} .MenuItem__Size:disabled { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; }
-
   #Menu-{{ uid }} .MenuItem__Footer {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
     gap: 12px;
     margin-top: auto;
     padding-top: 12px;
   }
-  #Menu-{{ uid }} .MenuItem__Price { font-family: var(--heading-font-family); font-size: 16px; color: var(--heading-color); }
-  #Menu-{{ uid }} .MenuItem__Price del { color: var(--text-color-light); font-weight: normal; margin-right: 6px; }
-  #Menu-{{ uid }} .MenuItem__Price ins { color: var(--product-sale-price-color); text-decoration: none; }
-
-  #Menu-{{ uid }} .MenuItem__Add {
-    border: none;
-    background: var(--menu-accent);
-    color: var(--menu-accent-text);
-    border-radius: 999px;
-    padding: 9px 16px;
+  #Menu-{{ uid }} .MenuItem__Price {
+    color: var(--heading-color);
     font-family: var(--heading-font-family);
+    font-size: 16px;
+    font-weight: 600;
+  }
+  #Menu-{{ uid }} .MenuItem__Detail {
+    color: var(--menu-accent);
     font-size: 12px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: opacity 0.2s ease, transform 0.1s ease;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-decoration: underline;
+    text-underline-offset: 3px;
     white-space: nowrap;
   }
-  #Menu-{{ uid }} .MenuItem__Add:hover { opacity: 0.9; }
-  #Menu-{{ uid }} .MenuItem__Add:active { transform: scale(0.97); }
-  #Menu-{{ uid }} .MenuItem__Add[disabled] { opacity: 0.5; cursor: not-allowed; }
-  #Menu-{{ uid }} .MenuItem__Add.is-loading { pointer-events: none; opacity: 0.7; }
-  #Menu-{{ uid }} .MenuItem__Add.is-added { background: #2e7d32; }
 
-  #Menu-{{ uid }} .MenuCategory__Empty { color: var(--text-color-light); padding: 20px 0; }
+  #Menu-{{ uid }} .MenuDialog {
+    position: fixed;
+    inset: 0;
+    z-index: 1001;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(20, 16, 14, .62);
+    opacity: 0;
+    transition: opacity .2s ease;
+  }
+  #Menu-{{ uid }} .MenuDialog.is-open { display: flex; opacity: 1; }
+  #Menu-{{ uid }} .MenuDialog__Panel {
+    position: relative;
+    width: min(920px, 100%);
+    max-height: min(820px, calc(100vh - 48px));
+    overflow-y: auto;
+    border-radius: var(--menu-modal-radius);
+    background: var(--background);
+    box-shadow: 0 28px 80px rgba(0, 0, 0, .24);
+  }
+  #Menu-{{ uid }} .MenuDialog__Close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    display: grid;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: var(--background);
+    color: var(--text-color);
+    box-shadow: 0 3px 16px rgba(0, 0, 0, .14);
+    cursor: pointer;
+    font-size: 23px;
+    line-height: 1;
+  }
+  #Menu-{{ uid }} .MenuDialog__Layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr);
+  }
+  #Menu-{{ uid }} .MenuDialog__Gallery { padding: 20px; }
+  #Menu-{{ uid }} .MenuDialog__MainImage {
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    border-radius: max(0px, calc(var(--menu-modal-radius) - 6px));
+    background: rgba(var(--text-color-rgb), .055);
+  }
+  #Menu-{{ uid }} .MenuDialog__Thumbnails {
+    display: flex;
+    gap: 9px;
+    margin-top: 10px;
+    overflow-x: auto;
+  }
+  #Menu-{{ uid }} .MenuDialog__Thumbnail {
+    flex: 0 0 66px;
+    width: 66px;
+    height: 66px;
+    overflow: hidden;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+  }
+  #Menu-{{ uid }} .MenuDialog__Thumbnail[aria-pressed="true"] { border-color: var(--menu-accent); }
+  #Menu-{{ uid }} .MenuDialog__Thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+  #Menu-{{ uid }} .MenuDialog__Content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 54px 40px 40px 24px;
+  }
+  #Menu-{{ uid }} .MenuDialog__Title { margin: 0; }
+  #Menu-{{ uid }} .MenuDialog__Price {
+    margin-top: 10px;
+    color: var(--heading-color);
+    font-family: var(--heading-font-family);
+    font-size: 20px;
+    font-weight: 600;
+  }
+  #Menu-{{ uid }} .MenuDialog__Description { margin-top: 20px; color: var(--text-color-light); }
+  #Menu-{{ uid }} .MenuDialog__Options { margin-top: 24px; }
+  #Menu-{{ uid }} .MenuDialog__OptionsTitle { margin: 0 0 8px; font-size: 14px; }
+  #Menu-{{ uid }} .MenuDialog__Option {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+  #Menu-{{ uid }} .MenuDialog__Option:first-of-type { border-top: 1px solid var(--border-color); }
+  #Menu-{{ uid }} .MenuDialog__OptionPrice { color: var(--heading-color); font-weight: 600; white-space: nowrap; }
+  #Menu-{{ uid }} .MenuSection__Empty { padding: 24px 0; color: var(--text-color-light); }
 
-  @media (max-width: 640px) {
-    #Menu-{{ uid }} .MenuGrid--grid { grid-template-columns: repeat({{ section.settings.grid_columns_mobile }}, minmax(0, 1fr)); }
-    #Menu-{{ uid }} .MenuItem__Media { flex-basis: 92px; width: 92px; height: 92px; }
+  @media (max-width: 1000px) {
+    #Menu-{{ uid }} .MenuGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #Menu-{{ uid }} .MenuItem__Button { flex-direction: column; }
+    #Menu-{{ uid }} .MenuItem__Media { width: 100%; height: auto; aspect-ratio: 4 / 3; flex-basis: auto; }
+  }
+  @media (max-width: 700px) {
+    #Menu-{{ uid }} { --menu-gap: 14px; }
+    #Menu-{{ uid }} .MenuGrid { grid-template-columns: 1fr; }
+    #Menu-{{ uid }} .MenuCategory { margin-bottom: 38px; }
+    #Menu-{{ uid }} .MenuItem__Button { min-height: 0; flex-direction: row; padding: 11px; }
+    #Menu-{{ uid }} .MenuItem__Media { width: 100px; height: 100px; flex: 0 0 100px; aspect-ratio: 1; }
+    #Menu-{{ uid }} .MenuItem__Summary { -webkit-line-clamp: 2; }
+    #Menu-{{ uid }} .MenuItem__Detail { font-size: 11px; }
+    #Menu-{{ uid }} .MenuDialog { align-items: flex-end; padding: 10px; }
+    #Menu-{{ uid }} .MenuDialog__Panel { max-height: calc(100vh - 20px); border-radius: var(--menu-modal-radius) var(--menu-modal-radius) 0 0; }
+    #Menu-{{ uid }} .MenuDialog__Layout { display: block; }
+    #Menu-{{ uid }} .MenuDialog__Gallery { padding: 12px; }
+    #Menu-{{ uid }} .MenuDialog__MainImage { aspect-ratio: 4 / 3; }
+    #Menu-{{ uid }} .MenuDialog__Content { padding: 22px 22px 32px; }
+  }
+  @media (max-width: 380px) {
+    #Menu-{{ uid }} .MenuItem__Media { width: 84px; height: 84px; flex-basis: 84px; }
+    #Menu-{{ uid }} .MenuItem__Summary { display: none; }
+    #Menu-{{ uid }} .MenuItem__Footer { padding-top: 7px; }
   }
 </style>
 
-<section id="Menu-{{ uid }}" class="Section Section--spacingNormal MenuSection"
-         data-section-id="{{ uid }}"
-         data-section-type="menu-list"
-         data-settings='{{ section_settings }}'>
+<section id="Menu-{{ uid }}" class="Section Section--spacingNormal MenuSection" data-section-id="{{ uid }}" data-section-type="menu-list">
   <div class="Container">
-    {%- if section.settings.title != blank or section.settings.description != blank -%}
+    {%- if section.settings.title != blank or section.settings.description != blank or section.settings.subheading != blank -%}
       <header class="MenuSection__Intro MenuSection__Intro--{{ section.settings.heading_alignment }}">
-        {%- if section.settings.subheading != blank -%}
-          <p class="Heading u-h6 Text--subdued">{{ section.settings.subheading | escape }}</p>
-        {%- endif -%}
-        {%- if section.settings.title != blank -%}
-          <h2 class="MenuSection__Title Heading u-h1">{{ section.settings.title | escape }}</h2>
-        {%- endif -%}
-        {%- if section.settings.description != blank -%}
-          <div class="MenuSection__Description Rte">{{ section.settings.description }}</div>
-        {%- endif -%}
+        {%- if section.settings.subheading != blank -%}<p class="Heading u-h6 Text--subdued">{{ section.settings.subheading | escape }}</p>{%- endif -%}
+        {%- if section.settings.title != blank -%}<h2 class="MenuSection__Title Heading u-h1">{{ section.settings.title | escape }}</h2>{%- endif -%}
+        {%- if section.settings.description != blank -%}<div class="MenuSection__Description Rte">{{ section.settings.description }}</div>{%- endif -%}
       </header>
     {%- endif -%}
   </div>
 
-  {%- comment -%} Barra de filtros de categorías {%- endcomment -%}
-  {%- if section.settings.show_filter and section.blocks.size > 0 -%}
-    <div class="MenuFilter" data-menu-filter>
+  {%- if section.settings.show_filter -%}
+    <nav class="MenuFilter" data-menu-filter aria-label="Categorías del menú">
       <div class="Container">
         <div class="MenuFilter__Track">
-          {%- if section.settings.show_all_tab -%}
-            <button type="button" class="MenuFilter__Item is-active" data-filter-target="all">{{ section.settings.all_tab_label | escape }}</button>
-          {%- endif -%}
           {%- for block in section.blocks -%}
-            {%- assign fcollection = collections[block.settings.collection] -%}
-            {%- assign ftitle = block.settings.title | default: fcollection.title | default: 'Categoría' -%}
-            <button type="button"
-                    class="MenuFilter__Item {% if section.settings.show_all_tab == false and forloop.first %}is-active{% endif %}"
-                    data-filter-target="cat-{{ block.id }}">
-              {{- ftitle | escape -}}
-            </button>
+            {%- if block.type == 'category' and block.settings.title != blank -%}
+              <button type="button" class="MenuFilter__Item{% unless has_named_category %} is-active{% endunless %}" data-filter-target="MenuCategory-{{ uid }}-{{ block.id }}">
+                {{ block.settings.title | escape }}
+              </button>
+              {%- assign has_named_category = true -%}
+            {%- endif -%}
           {%- endfor -%}
         </div>
       </div>
-    </div>
+    </nav>
   {%- endif -%}
 
   <div class="Container">
     {%- if section.blocks.size == 0 -%}
-      <p class="MenuCategory__Empty">Agrega categorías desde el personalizador para mostrar tu menú.</p>
-    {%- endif -%}
-
-    {%- for block in section.blocks -%}
-      {%- assign collection = collections[block.settings.collection] -%}
-      {%- assign cat_title = block.settings.title | default: collection.title | default: 'Categoría' -%}
-
-      <div class="MenuCategory" id="cat-{{ block.id }}" data-menu-category {{ block.shopify_attributes }}>
-        <div class="MenuCategory__Header">
-          <h3 class="MenuCategory__Title Heading u-h2">{{ cat_title | escape }}</h3>
-          {%- if block.settings.description != blank -%}
-            <p class="MenuCategory__Desc">{{ block.settings.description | escape }}</p>
+      {%- if request.design_mode -%}<p class="MenuSection__Empty">Agrega bloques de categoría e ítem para construir la carta.</p>{%- endif -%}
+    {%- else -%}
+      {%- assign category_open = false -%}
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'category' -%}
+          {%- if category_open -%}</div></div>{%- endif -%}
+          {%- assign category_open = true -%}
+          <div class="MenuCategory" id="MenuCategory-{{ uid }}-{{ block.id }}" data-menu-category {{ block.shopify_attributes }}>
+            <header class="MenuCategory__Header">
+              <h3 class="MenuCategory__Title Heading u-h2">{{ block.settings.title | default: section.settings.general_category_label | escape }}</h3>
+              {%- if block.settings.description != blank -%}<p class="MenuCategory__Description">{{ block.settings.description | escape }}</p>{%- endif -%}
+            </header>
+            <div class="MenuGrid">
+        {%- elsif block.type == 'item' and block.settings.title != blank -%}
+          {%- unless category_open -%}
+            {%- assign category_open = true -%}
+            <div class="MenuCategory" id="MenuCategory-{{ uid }}-general" data-menu-category>
+              <header class="MenuCategory__Header"><h3 class="MenuCategory__Title Heading u-h2">{{ section.settings.general_category_label | escape }}</h3></header>
+              <div class="MenuGrid">
+          {%- endunless -%}
+          {%- assign has_options = false -%}
+          {%- if block.settings.option_1_name != blank or block.settings.option_1_price != blank or block.settings.option_2_name != blank or block.settings.option_2_price != blank or block.settings.option_3_name != blank or block.settings.option_3_price != blank or block.settings.option_4_name != blank or block.settings.option_4_price != blank -%}
+            {%- assign has_options = true -%}
           {%- endif -%}
-        </div>
-
-        {%- if collection != empty and collection.products_count > 0 -%}
-          <div class="MenuGrid MenuGrid--{{ section.settings.layout_mode }}">
-            {%- for product in collection.products limit: block.settings.products_limit -%}
-              {%- assign selected_variant = product.selected_or_first_available_variant -%}
-
-              <article class="MenuItem" data-menu-item>
-                {%- if section.settings.show_image and product.featured_media -%}
-                  <a class="MenuItem__Media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
-                    <img src="{{ product.featured_media | image_url: width: 400 }}"
-                         srcset="{{ product.featured_media | image_url: width: 200 }} 200w, {{ product.featured_media | image_url: width: 400 }} 400w"
-                         sizes="{{ section.settings.image_size }}px"
-                         width="{{ section.settings.image_size }}" height="{{ section.settings.image_size }}"
-                         loading="lazy"
-                         alt="{{ product.featured_media.alt | default: product.title | escape }}">
-                  </a>
+          <article class="MenuItem" data-menu-item {{ block.shopify_attributes }}>
+            <button type="button" class="MenuItem__Button" data-menu-open="MenuDialog-{{ uid }}-{{ block.id }}" aria-haspopup="dialog" aria-controls="MenuDialog-{{ uid }}-{{ block.id }}">
+              <span class="MenuItem__Media">
+                {%- if block.settings.image != blank -%}
+                  <img src="{{ block.settings.image | image_url: width: 320 }}" srcset="{{ block.settings.image | image_url: width: 200 }} 200w, {{ block.settings.image | image_url: width: 320 }} 320w, {{ block.settings.image | image_url: width: 480 }} 480w" sizes="{{ section.settings.image_size }}px" width="{{ block.settings.image.width }}" height="{{ block.settings.image.height }}" loading="lazy" alt="{{ block.settings.image.alt | default: block.settings.title | escape }}">
+                {%- else -%}
+                  <span class="MenuItem__Placeholder" aria-hidden="true">DA</span>
                 {%- endif -%}
+              </span>
+              <span class="MenuItem__Content">
+                {%- if block.settings.badge != blank -%}<span class="MenuItem__Badge">{{ block.settings.badge | escape }}</span>{%- endif -%}
+                <span class="MenuItem__Name">{{ block.settings.title | escape }}</span>
+                {%- if block.settings.short_description != blank -%}<span class="MenuItem__Summary">{{ block.settings.short_description | escape }}</span>{%- endif -%}
+                <span class="MenuItem__Footer">
+                  {%- if block.settings.base_price != blank -%}<span class="MenuItem__Price">{% if has_options and section.settings.from_label != blank %}{{ section.settings.from_label | escape }} {% endif %}{{ block.settings.base_price | escape }}</span>{%- endif -%}
+                  <span class="MenuItem__Detail">{{ section.settings.detail_button_label | escape }}</span>
+                </span>
+              </span>
+            </button>
+          </article>
 
-                <div class="MenuItem__Body">
-                  <h4 class="MenuItem__Name Heading">
-                    <a href="{{ product.url }}">{{ product.title | escape }}</a>
-                  </h4>
-
-                  {%- if section.settings.show_description and product.description != blank -%}
-                    <p class="MenuItem__Desc">{{ product.description | strip_html | truncatewords: 24 }}</p>
-                  {%- endif -%}
-
-                  {%- comment -%} Selector de tamaños (variantes) {%- endcomment -%}
-                  {%- unless product.has_only_default_variant -%}
-                    <div class="MenuItem__Sizes" role="group" aria-label="Tamaño">
-                      {%- for variant in product.variants -%}
-                        <button type="button"
-                                class="MenuItem__Size {% if variant.id == selected_variant.id %}is-selected{% endif %}"
-                                data-variant-id="{{ variant.id }}"
-                                data-price="{{ variant.price }}"
-                                data-price-formatted="{{ variant.price | money_without_trailing_zeros | strip_html | escape }}"
-                                data-available="{{ variant.available }}"
-                                {% unless variant.available %}disabled{% endunless %}>
-                          {{- variant.title | escape -}}
-                        </button>
+          <div id="MenuDialog-{{ uid }}-{{ block.id }}" class="MenuDialog" data-menu-dialog role="dialog" aria-modal="true" aria-labelledby="MenuDialogTitle-{{ uid }}-{{ block.id }}" aria-hidden="true">
+            <div class="MenuDialog__Panel" data-menu-panel>
+              <button type="button" class="MenuDialog__Close" data-menu-close aria-label="Cerrar detalles">×</button>
+              <div class="MenuDialog__Layout">
+                <div class="MenuDialog__Gallery">
+                  <div class="MenuDialog__MainImage">
+                    {%- if block.settings.image != blank -%}
+                      <img data-menu-main-image src="{{ block.settings.image | image_url: width: 900 }}" srcset="{{ block.settings.image | image_url: width: 500 }} 500w, {{ block.settings.image | image_url: width: 900 }} 900w" sizes="(max-width: 700px) 100vw, 50vw" width="{{ block.settings.image.width }}" height="{{ block.settings.image.height }}" loading="lazy" alt="{{ block.settings.image.alt | default: block.settings.title | escape }}">
+                    {%- else -%}
+                      <span class="MenuItem__Placeholder" aria-hidden="true">Dulce Avellana</span>
+                    {%- endif -%}
+                  </div>
+                  {%- if block.settings.image != blank or block.settings.gallery_image_1 != blank or block.settings.gallery_image_2 != blank or block.settings.gallery_image_3 != blank -%}
+                    <div class="MenuDialog__Thumbnails" aria-label="Galería de {{ block.settings.title | escape }}">
+                      {%- if block.settings.image != blank -%}
+                        <button type="button" class="MenuDialog__Thumbnail" data-menu-thumbnail data-image-src="{{ block.settings.image | image_url: width: 900 }}" data-image-srcset="{{ block.settings.image | image_url: width: 500 }} 500w, {{ block.settings.image | image_url: width: 900 }} 900w" data-image-alt="{{ block.settings.image.alt | default: block.settings.title | escape }}" aria-pressed="true"><img src="{{ block.settings.image | image_url: width: 140 }}" width="70" height="70" loading="lazy" alt=""></button>
+                      {%- endif -%}
+                      {%- for index in (1..3) -%}
+                        {%- assign gallery_key = 'gallery_image_' | append: index -%}
+                        {%- assign gallery_image = block.settings[gallery_key] -%}
+                        {%- if gallery_image != blank -%}
+                          <button type="button" class="MenuDialog__Thumbnail" data-menu-thumbnail data-image-src="{{ gallery_image | image_url: width: 900 }}" data-image-srcset="{{ gallery_image | image_url: width: 500 }} 500w, {{ gallery_image | image_url: width: 900 }} 900w" data-image-alt="{{ gallery_image.alt | default: block.settings.title | escape }}" aria-pressed="false"><img src="{{ gallery_image | image_url: width: 140 }}" width="70" height="70" loading="lazy" alt=""></button>
+                        {%- endif -%}
                       {%- endfor -%}
                     </div>
-                  {%- endunless -%}
-
-                  <div class="MenuItem__Footer">
-                    <div class="MenuItem__Price" data-menu-price>
-                      {%- if product.compare_at_price > product.price -%}
-                        <del>{{ product.compare_at_price | money_without_trailing_zeros }}</del>
-                        <ins>{{ selected_variant.price | money_without_trailing_zeros }}</ins>
-                      {%- elsif product.price_varies -%}
-                        {{ selected_variant.price | money_without_trailing_zeros }}
-                      {%- else -%}
-                        {{ selected_variant.price | money_without_trailing_zeros }}
-                      {%- endif -%}
-                    </div>
-
-                    <button type="button"
-                            class="MenuItem__Add"
-                            data-menu-add
-                            data-variant-id="{{ selected_variant.id }}"
-                            {% unless product.available %}disabled{% endunless %}>
-                      {%- if product.available -%}
-                        {% render 'icon' with 'plus' %}
-                        <span>{{ section.settings.add_button_label | escape }}</span>
-                      {%- else -%}
-                        <span>{{ 'product.form.sold_out' | t }}</span>
-                      {%- endif -%}
-                    </button>
-                  </div>
+                  {%- endif -%}
                 </div>
-              </article>
-            {%- endfor -%}
+                <div class="MenuDialog__Content">
+                  {%- if block.settings.badge != blank -%}<span class="MenuDialog__Badge">{{ block.settings.badge | escape }}</span>{%- endif -%}
+                  <h3 id="MenuDialogTitle-{{ uid }}-{{ block.id }}" class="MenuDialog__Title Heading u-h2">{{ block.settings.title | escape }}</h3>
+                  {%- if block.settings.base_price != blank -%}<div class="MenuDialog__Price">{% if has_options and section.settings.from_label != blank %}{{ section.settings.from_label | escape }} {% endif %}{{ block.settings.base_price | escape }}</div>{%- endif -%}
+                  {%- if block.settings.description != blank -%}<div class="MenuDialog__Description Rte">{{ block.settings.description }}</div>{%- elsif block.settings.short_description != blank -%}<p class="MenuDialog__Description">{{ block.settings.short_description | escape }}</p>{%- endif -%}
+                  {%- if has_options -%}
+                    <div class="MenuDialog__Options">
+                      <h4 class="MenuDialog__OptionsTitle Heading">Tamaños y presentaciones</h4>
+                      {%- for index in (1..4) -%}
+                        {%- assign name_key = 'option_' | append: index | append: '_name' -%}
+                        {%- assign price_key = 'option_' | append: index | append: '_price' -%}
+                        {%- assign option_name = block.settings[name_key] -%}
+                        {%- assign option_price = block.settings[price_key] -%}
+                        {%- if option_name != blank or option_price != blank -%}
+                          <div class="MenuDialog__Option"><span>{{ option_name | default: 'Presentación' | escape }}</span>{%- if option_price != blank -%}<span class="MenuDialog__OptionPrice">{{ option_price | escape }}</span>{%- endif -%}</div>
+                        {%- endif -%}
+                      {%- endfor -%}
+                    </div>
+                  {%- endif -%}
+                </div>
+              </div>
+            </div>
           </div>
-        {%- else -%}
-          <p class="MenuCategory__Empty">
-            {%- if collection == empty -%}
-              Selecciona una colección para esta categoría en el personalizador.
-            {%- else -%}
-              Esta categoría no tiene productos por el momento.
-            {%- endif -%}
-          </p>
         {%- endif -%}
-      </div>
-    {%- endfor -%}
+      {%- endfor -%}
+      {%- if category_open -%}</div></div>{%- endif -%}
+    {%- endif -%}
   </div>
 </section>
 
 <script>
   (function () {
-    var root = document.getElementById('Menu-{{ uid }}');
-    if (!root) return;
+    function initMenu(root) {
+      if (!root || root.dataset.menuInitialized === 'true') return;
+      root.dataset.menuInitialized = 'true';
+      var activeTrigger = null;
 
-    var settings = {};
-    try { settings = JSON.parse(root.getAttribute('data-settings')) || {}; } catch (e) {}
+      function focusable(dialog) {
+        return Array.prototype.slice.call(dialog.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'));
+      }
+      function openDialog(dialog, trigger) {
+        if (!dialog) return;
+        activeTrigger = trigger;
+        dialog.classList.add('is-open');
+        dialog.setAttribute('aria-hidden', 'false');
+        document.documentElement.classList.add('MenuModalOpen');
+        var close = dialog.querySelector('[data-menu-close]');
+        if (close) close.focus();
+      }
+      function closeDialog(dialog) {
+        if (!dialog) return;
+        dialog.classList.remove('is-open');
+        dialog.setAttribute('aria-hidden', 'true');
+        document.documentElement.classList.remove('MenuModalOpen');
+        if (activeTrigger && document.documentElement.contains(activeTrigger)) activeTrigger.focus();
+        activeTrigger = null;
+      }
+      function selectImage(button) {
+        var dialog = button.closest('[data-menu-dialog]');
+        var image = dialog && dialog.querySelector('[data-menu-main-image]');
+        if (!image) return;
+        image.src = button.dataset.imageSrc;
+        image.srcset = button.dataset.imageSrcset || '';
+        image.alt = button.dataset.imageAlt || '';
+        dialog.querySelectorAll('[data-menu-thumbnail]').forEach(function (thumbnail) {
+          thumbnail.setAttribute('aria-pressed', thumbnail === button ? 'true' : 'false');
+        });
+      }
+      function scrollToCategory(button) {
+        var target = document.getElementById(button.dataset.filterTarget);
+        if (!target) return;
+        root.querySelectorAll('.MenuFilter__Item').forEach(function (item) { item.classList.remove('is-active'); });
+        button.classList.add('is-active');
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
 
-    var cartAddUrl = (window.routes && window.routes.cartAddUrl ? window.routes.cartAddUrl : '/cart/add') + '.js';
+      root.addEventListener('click', function (event) {
+        var opener = event.target.closest('[data-menu-open]');
+        var closer = event.target.closest('[data-menu-close]');
+        var thumbnail = event.target.closest('[data-menu-thumbnail]');
+        var filter = event.target.closest('[data-filter-target]');
+        var backdrop = event.target.matches('[data-menu-dialog]') ? event.target : null;
+        if (opener) openDialog(document.getElementById(opener.dataset.menuOpen), opener);
+        else if (closer) closeDialog(closer.closest('[data-menu-dialog]'));
+        else if (thumbnail) selectImage(thumbnail);
+        else if (filter) scrollToCategory(filter);
+        else if (backdrop) closeDialog(backdrop);
+      });
 
-    // ── Filtros de categoría ──────────────────────────────────────────────
-    var filterBar = root.querySelector('[data-menu-filter]');
-    if (filterBar) {
-      filterBar.addEventListener('click', function (e) {
-        var btn = e.target.closest('.MenuFilter__Item');
-        if (!btn) return;
-
-        filterBar.querySelectorAll('.MenuFilter__Item').forEach(function (b) { b.classList.remove('is-active'); });
-        btn.classList.add('is-active');
-
-        var target = btn.getAttribute('data-filter-target');
-        var categories = root.querySelectorAll('[data-menu-category]');
-
-        if (target === 'all') {
-          categories.forEach(function (c) { c.style.display = ''; });
-          root.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-          {% comment %} Filtrado: muestra solo la categoría y hace scroll {% endcomment %}
-          {% if section.settings.filter_behavior == 'scroll' %}
-          categories.forEach(function (c) { c.style.display = ''; });
-          var el = document.getElementById(target);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          {% else %}
-          categories.forEach(function (c) { c.style.display = (c.id === target) ? '' : 'none'; });
-          {% endif %}
+      root.addEventListener('keydown', function (event) {
+        var dialog = event.target.closest('[data-menu-dialog].is-open');
+        if (!dialog) return;
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeDialog(dialog);
+          return;
         }
+        if (event.key !== 'Tab') return;
+        var items = focusable(dialog);
+        if (!items.length) return;
+        var first = items[0];
+        var last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
       });
     }
 
-    // ── Selector de tamaños ───────────────────────────────────────────────
-    root.addEventListener('click', function (e) {
-      var sizeBtn = e.target.closest('.MenuItem__Size');
-      if (!sizeBtn || sizeBtn.disabled) return;
-
-      var item = sizeBtn.closest('[data-menu-item]');
-      if (!item) return;
-
-      item.querySelectorAll('.MenuItem__Size').forEach(function (b) { b.classList.remove('is-selected'); });
-      sizeBtn.classList.add('is-selected');
-
-      var addBtn = item.querySelector('[data-menu-add]');
-      if (addBtn) addBtn.setAttribute('data-variant-id', sizeBtn.getAttribute('data-variant-id'));
-
-      var priceEl = item.querySelector('[data-menu-price]');
-      var formatted = sizeBtn.getAttribute('data-price-formatted');
-      if (priceEl && formatted) priceEl.textContent = formatted;
+    initMenu(document.getElementById('Menu-{{ uid }}'));
+    document.addEventListener('shopify:section:load', function (event) {
+      initMenu(event.target.querySelector('[data-section-type="menu-list"]'));
     });
-
-    // ── Añadir al carrito (AJAX) ──────────────────────────────────────────
-    function openCartDrawer() {
-      var opener = document.querySelector('[data-action="open-drawer"][data-drawer-id="sidebar-cart"]');
-      if (opener) { opener.click(); }
-    }
-
-    root.addEventListener('click', function (e) {
-      var addBtn = e.target.closest('[data-menu-add]');
-      if (!addBtn || addBtn.disabled) return;
-
-      var variantId = addBtn.getAttribute('data-variant-id');
-      if (!variantId) return;
-
-      var originalHtml = addBtn.innerHTML;
-      addBtn.classList.add('is-loading');
-      addBtn.setAttribute('disabled', 'disabled');
-
-      fetch(cartAddUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ id: variantId, quantity: 1 })
-      })
-        .then(function (res) {
-          if (!res.ok) throw new Error('add_error');
-          return res.json();
-        })
-        .then(function (line) {
-          addBtn.classList.remove('is-loading');
-          addBtn.classList.add('is-added');
-          addBtn.innerHTML = '<span>{{ section.settings.added_button_label | default: 'Agregado' }}</span>';
-
-          // Refresca el mini-cart del tema y notifica a otros scripts (Meta Pixel, etc.)
-          document.documentElement.dispatchEvent(new CustomEvent('cart:refresh', { bubbles: true }));
-          document.documentElement.dispatchEvent(new CustomEvent('product:added', {
-            bubbles: true,
-            detail: { variant: { id: variantId }, quantity: 1 }
-          }));
-
-          if (settings.showDrawerAfterAdd) {
-            setTimeout(openCartDrawer, 250);
-          }
-
-          setTimeout(function () {
-            addBtn.classList.remove('is-added');
-            addBtn.innerHTML = originalHtml;
-            addBtn.removeAttribute('disabled');
-          }, 1600);
-        })
-        .catch(function () {
-          addBtn.classList.remove('is-loading');
-          addBtn.removeAttribute('disabled');
-          addBtn.innerHTML = originalHtml;
-          alert('No se pudo agregar el producto. Intenta de nuevo.');
-        });
+    document.addEventListener('shopify:section:unload', function (event) {
+      if (event.target.querySelector('[data-menu-dialog].is-open')) document.documentElement.classList.remove('MenuModalOpen');
     });
   })();
 </script>
 
 {% schema %}
 {
-  "name": "Menú de productos",
+  "name": "Menú informativo",
   "class": "shopify-section--menu",
   "settings": [
-    {
-      "type": "header",
-      "content": "Encabezado"
-    },
-    {
-      "type": "text",
-      "id": "subheading",
-      "label": "Texto superior",
-      "default": "Nuestra carta"
-    },
-    {
-      "type": "text",
-      "id": "title",
-      "label": "Título",
-      "default": "Menú"
-    },
-    {
-      "type": "richtext",
-      "id": "description",
-      "label": "Descripción"
-    },
-    {
-      "type": "select",
-      "id": "heading_alignment",
-      "label": "Alineación del encabezado",
-      "options": [
-        { "value": "left", "label": "Izquierda" },
-        { "value": "center", "label": "Centro" }
-      ],
-      "default": "center"
-    },
-    {
-      "type": "header",
-      "content": "Barra de filtros"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_filter",
-      "label": "Mostrar barra de categorías",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "sticky_filter",
-      "label": "Barra fija al hacer scroll",
-      "default": true
-    },
-    {
-      "type": "checkbox",
-      "id": "show_all_tab",
-      "label": "Mostrar pestaña \"Todo\"",
-      "default": true
-    },
-    {
-      "type": "text",
-      "id": "all_tab_label",
-      "label": "Texto de la pestaña \"Todo\"",
-      "default": "Todo"
-    },
-    {
-      "type": "select",
-      "id": "filter_behavior",
-      "label": "Comportamiento del filtro",
-      "options": [
-        { "value": "scroll", "label": "Desplazar a la categoría" },
-        { "value": "isolate", "label": "Mostrar solo la categoría" }
-      ],
-      "default": "scroll"
-    },
-    {
-      "type": "header",
-      "content": "Diseño de tarjetas"
-    },
-    {
-      "type": "select",
-      "id": "layout_mode",
-      "label": "Diseño",
-      "options": [
-        { "value": "list", "label": "Lista" },
-        { "value": "grid", "label": "Cuadrícula" }
-      ],
-      "default": "list"
-    },
-    {
-      "type": "select",
-      "id": "grid_columns",
-      "label": "Columnas (escritorio, modo cuadrícula)",
-      "options": [
-        { "value": "2", "label": "2" },
-        { "value": "3", "label": "3" },
-        { "value": "4", "label": "4" }
-      ],
-      "default": "3"
-    },
-    {
-      "type": "select",
-      "id": "grid_columns_mobile",
-      "label": "Columnas (móvil, modo cuadrícula)",
-      "options": [
-        { "value": "1", "label": "1" },
-        { "value": "2", "label": "2" }
-      ],
-      "default": "1"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_image",
-      "label": "Mostrar imagen",
-      "default": true
-    },
-    {
-      "type": "range",
-      "id": "image_size",
-      "label": "Tamaño de imagen (modo lista)",
-      "min": 80,
-      "max": 160,
-      "step": 2,
-      "unit": "px",
-      "default": 110
-    },
-    {
-      "type": "checkbox",
-      "id": "show_description",
-      "label": "Mostrar descripción",
-      "default": true
-    },
-    {
-      "type": "range",
-      "id": "card_radius",
-      "label": "Redondeo de tarjetas",
-      "min": 0,
-      "max": 28,
-      "step": 2,
-      "unit": "px",
-      "default": 16
-    },
-    {
-      "type": "text",
-      "id": "add_button_label",
-      "label": "Texto del botón agregar",
-      "default": "Agregar"
-    },
-    {
-      "type": "text",
-      "id": "added_button_label",
-      "label": "Texto de confirmación al agregar",
-      "default": "Agregado"
-    },
-    {
-      "type": "header",
-      "content": "Colores"
-    },
-    {
-      "type": "color",
-      "id": "accent_color",
-      "label": "Color de acento (botones/pestañas)",
-      "info": "Si se deja vacío usa el color de botón del tema."
-    },
-    {
-      "type": "color",
-      "id": "accent_text_color",
-      "label": "Color del texto sobre acento"
-    }
+    { "type": "header", "content": "Encabezado" },
+    { "type": "text", "id": "subheading", "label": "Texto superior", "default": "Nuestra carta" },
+    { "type": "text", "id": "title", "label": "Título", "default": "Menú" },
+    { "type": "richtext", "id": "description", "label": "Descripción" },
+    { "type": "select", "id": "heading_alignment", "label": "Alineación", "options": [{ "value": "left", "label": "Izquierda" }, { "value": "center", "label": "Centro" }], "default": "center" },
+    { "type": "header", "content": "Navegación" },
+    { "type": "checkbox", "id": "show_filter", "label": "Mostrar categorías", "default": true },
+    { "type": "checkbox", "id": "sticky_filter", "label": "Categorías fijas al desplazarse", "default": true },
+    { "type": "text", "id": "general_category_label", "label": "Nombre para ítems sin categoría", "default": "Otros" },
+    { "type": "header", "content": "Tarjetas y detalle" },
+    { "type": "select", "id": "grid_columns", "label": "Columnas en escritorio", "options": [{ "value": "2", "label": "2" }, { "value": "3", "label": "3" }], "default": "2" },
+    { "type": "range", "id": "image_size", "label": "Tamaño de imagen", "min": 96, "max": 180, "step": 2, "unit": "px", "default": 132 },
+    { "type": "range", "id": "card_radius", "label": "Redondeo de tarjetas", "min": 0, "max": 28, "step": 2, "unit": "px", "default": 18 },
+    { "type": "range", "id": "modal_radius", "label": "Redondeo del modal", "min": 0, "max": 32, "step": 2, "unit": "px", "default": 20 },
+    { "type": "text", "id": "detail_button_label", "label": "Texto del botón", "default": "Ver detalles" },
+    { "type": "text", "id": "from_label", "label": "Prefijo para precios con opciones", "default": "Desde" },
+    { "type": "header", "content": "Colores" },
+    { "type": "color", "id": "accent_color", "label": "Color de acento" },
+    { "type": "color", "id": "accent_text_color", "label": "Texto sobre el acento" }
   ],
   "blocks": [
     {
       "type": "category",
       "name": "Categoría",
       "settings": [
-        {
-          "type": "collection",
-          "id": "collection",
-          "label": "Colección (categoría)",
-          "info": "Crea o edita las categorías creando colecciones en Productos → Colecciones."
-        },
-        {
-          "type": "text",
-          "id": "title",
-          "label": "Título de la categoría",
-          "info": "Si se deja vacío se usa el nombre de la colección."
-        },
-        {
-          "type": "text",
-          "id": "description",
-          "label": "Descripción de la categoría"
-        },
-        {
-          "type": "range",
-          "id": "products_limit",
-          "label": "Máximo de productos a mostrar",
-          "min": 4,
-          "max": 50,
-          "step": 1,
-          "default": 24
-        }
+        { "type": "text", "id": "title", "label": "Nombre", "default": "Categoría" },
+        { "type": "text", "id": "description", "label": "Descripción" }
+      ]
+    },
+    {
+      "type": "item",
+      "name": "Ítem del menú",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Nombre", "default": "Nuevo ítem" },
+        { "type": "text", "id": "badge", "label": "Etiqueta", "info": "Ejemplo: Favorito, Nuevo o Vegano" },
+        { "type": "image_picker", "id": "image", "label": "Imagen principal" },
+        { "type": "textarea", "id": "short_description", "label": "Resumen para la tarjeta" },
+        { "type": "richtext", "id": "description", "label": "Descripción completa" },
+        { "type": "text", "id": "base_price", "label": "Precio base", "info": "Ejemplo: $12.000" },
+        { "type": "header", "content": "Tamaños y presentaciones" },
+        { "type": "text", "id": "option_1_name", "label": "Opción 1 — nombre" },
+        { "type": "text", "id": "option_1_price", "label": "Opción 1 — precio" },
+        { "type": "text", "id": "option_2_name", "label": "Opción 2 — nombre" },
+        { "type": "text", "id": "option_2_price", "label": "Opción 2 — precio" },
+        { "type": "text", "id": "option_3_name", "label": "Opción 3 — nombre" },
+        { "type": "text", "id": "option_3_price", "label": "Opción 3 — precio" },
+        { "type": "text", "id": "option_4_name", "label": "Opción 4 — nombre" },
+        { "type": "text", "id": "option_4_price", "label": "Opción 4 — precio" },
+        { "type": "header", "content": "Galería" },
+        { "type": "image_picker", "id": "gallery_image_1", "label": "Imagen adicional 1" },
+        { "type": "image_picker", "id": "gallery_image_2", "label": "Imagen adicional 2" },
+        { "type": "image_picker", "id": "gallery_image_3", "label": "Imagen adicional 3" }
       ]
     }
   ],
   "presets": [
     {
-      "name": "Menú de productos",
+      "name": "Menú informativo",
       "category": "Menú",
-      "blocks": [
-        { "type": "category" },
-        { "type": "category" }
-      ]
+      "blocks": [{ "type": "category" }, { "type": "item" }, { "type": "item" }]
     }
   ]
 }

@@ -1,0 +1,63 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+
+const sectionSource = readFileSync(new URL('../sections/menu-list.liquid', import.meta.url), 'utf8');
+const template = JSON.parse(readFileSync(new URL('../templates/page.menu.json', import.meta.url), 'utf8'));
+const schemaMatch = sectionSource.match(/{% schema %}([\s\S]*?){% endschema %}/);
+
+assert.ok(schemaMatch, 'menu-list must expose a Shopify schema');
+
+const schema = JSON.parse(schemaMatch[1]);
+const settingIds = new Set(schema.settings.filter((setting) => setting.id).map((setting) => setting.id));
+const blockTypes = new Map(schema.blocks.map((block) => [block.type, block]));
+
+test('menu schema exposes category and manually configurable item blocks', () => {
+  assert.deepEqual([...blockTypes.keys()], ['category', 'item']);
+
+  const itemSettingIds = new Set(blockTypes.get('item').settings.map((setting) => setting.id));
+  for (const id of [
+    'title', 'badge', 'image', 'short_description', 'description', 'base_price',
+    'option_1_name', 'option_1_price', 'option_4_name', 'option_4_price',
+    'gallery_image_1', 'gallery_image_3'
+  ]) {
+    assert.ok(itemSettingIds.has(id), `missing item setting: ${id}`);
+  }
+});
+
+test('menu section exposes the agreed presentation controls', () => {
+  for (const id of [
+    'show_filter', 'sticky_filter', 'grid_columns', 'image_size', 'card_radius',
+    'modal_radius', 'detail_button_label', 'from_label', 'general_category_label'
+  ]) {
+    assert.ok(settingIds.has(id), `missing section setting: ${id}`);
+  }
+});
+
+test('menu no longer depends on Shopify catalog or cart objects', () => {
+  for (const forbidden of [
+    /collections\[/, /collection\.products/, /product\./, /variant/i,
+    /cartAddUrl/, /data-menu-add/, /\/cart\//
+  ]) {
+    assert.doesNotMatch(sectionSource, forbidden);
+  }
+});
+
+test('menu markup contains accessible dialog and gallery contracts', () => {
+  for (const required of [
+    'data-menu-open', 'data-menu-dialog', 'data-menu-close', 'data-menu-thumbnail',
+    'role="dialog"', 'aria-modal="true"', 'shopify:section:load',
+    'shopify:section:unload', 'MenuModalOpen'
+  ]) {
+    assert.ok(sectionSource.includes(required), `missing markup or behavior: ${required}`);
+  }
+});
+
+test('page template seeds ordered informational blocks', () => {
+  const menu = template.sections.menu;
+  assert.equal(menu.type, 'menu-list');
+  const orderedTypes = menu.block_order.map((id) => menu.blocks[id].type);
+  assert.deepEqual(orderedTypes, ['category', 'item', 'item', 'category', 'item']);
+  assert.equal(menu.settings.grid_columns, '2');
+  assert.equal(menu.settings.detail_button_label, 'Ver detalles');
+});
