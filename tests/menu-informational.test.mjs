@@ -51,6 +51,17 @@ test('desktop modal keeps gallery fixed and scrolls only its content column', ()
   for (const value of ['@media (min-width: 701px)', 'Desktop split scroll', 'scrollbar-gutter: stable', 'overscroll-behavior: contain']) assert.ok(sectionSource.includes(value), `missing desktop modal scroll rule: ${value}`);
 });
 
+test('estimated total falls back to base price when no named presentation exists', () => {
+  assert.ok(sectionSource.includes('function getBasePrice(dialog)'), 'missing base-price fallback');
+  assert.doesNotMatch(sectionSource, /option_name != blank or option_price != blank/);
+});
+
+test('items expose and render seven dietary indicators', () => {
+  const itemIds = new Set(blockTypes.get('item').settings.filter((s) => s.id).map((s) => s.id));
+  for (const id of ['contains_peanuts', 'contains_tree_nuts', 'contains_gluten', 'contains_dairy', 'is_spicy', 'is_vegetarian', 'is_vegan']) assert.ok(itemIds.has(id), `missing dietary setting: ${id}`);
+  for (const marker of ['data-menu-dietary-card', 'data-menu-dietary-modal']) assert.ok(sectionSource.includes(marker), `missing dietary markup: ${marker}`);
+});
+
 test('menu renders an accessible additions calculator contract', () => {
   for (const value of ['type="radio"', 'type="checkbox"', 'data-menu-presentation', 'data-menu-addition', 'data-menu-total', 'data-menu-selection-status', 'aria-live="polite"', 'function formatMoney', 'function updateEstimate', 'function resetConfigurator']) assert.ok(sectionSource.includes(value), `missing additions behavior: ${value}`);
 });
