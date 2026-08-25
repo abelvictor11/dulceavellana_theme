@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const sectionSource = readFileSync(new URL('../sections/menu-list.liquid', import.meta.url), 'utf8');
+const dietarySnippet = readFileSync(new URL('../snippets/menu-dietary-indicators.liquid', import.meta.url), 'utf8');
 const template = JSON.parse(readFileSync(new URL('../templates/page.menu.json', import.meta.url), 'utf8'));
 const schemaMatch = sectionSource.match(/{% schema %}([\s\S]*?){% endschema %}/);
 
@@ -60,6 +61,26 @@ test('items expose and render seven dietary indicators', () => {
   const itemIds = new Set(blockTypes.get('item').settings.filter((s) => s.id).map((s) => s.id));
   for (const id of ['contains_peanuts', 'contains_tree_nuts', 'contains_gluten', 'contains_dairy', 'is_spicy', 'is_vegetarian', 'is_vegan']) assert.ok(itemIds.has(id), `missing dietary setting: ${id}`);
   for (const marker of ['data-menu-dietary-card', 'data-menu-dietary-modal']) assert.ok(sectionSource.includes(marker), `missing dietary markup: ${marker}`);
+});
+
+test('dietary indicators use the supplied optimized SVG artwork', () => {
+  for (const icon of ['peanut_icon', 'tree_nut_icon', 'gluten_icon', 'dairy_icon', 'spicy_icon', 'vegetarian_icon']) {
+    assert.ok(dietarySnippet.includes(`capture ${icon}`), `missing supplied icon: ${icon}`);
+  }
+  for (const binding of [
+    ['contains_peanuts', 'peanut_icon'],
+    ['contains_tree_nuts', 'tree_nut_icon'],
+    ['contains_gluten', 'gluten_icon'],
+    ['contains_dairy', 'dairy_icon'],
+    ['is_spicy', 'spicy_icon'],
+    ['is_vegetarian', 'vegetarian_icon'],
+    ['is_vegan', 'vegetarian_icon']
+  ]) {
+    assert.match(dietarySnippet, new RegExp(`item\\.${binding[0]}[\\s\\S]*?\\{\\{ ${binding[1]} \\}\\}`));
+  }
+  assert.doesNotMatch(dietarySnippet, /warning_icon|leaf_icon|flame_icon|<metadata|<\?xml|AdobeIllustrator/);
+  assert.equal((dietarySnippet.match(/aria-hidden="true"/g) || []).length, 6);
+  assert.equal((dietarySnippet.match(/fill="currentColor"/g) || []).length, 6);
 });
 
 test('menu renders an accessible additions calculator contract', () => {
