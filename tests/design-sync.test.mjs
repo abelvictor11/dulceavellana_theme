@@ -48,3 +48,18 @@ test('approved additional templates exist and reference available section types'
     }
   }
 });
+
+test('preloader is installed while footer and heading semantics stay approved', () => {
+  const layout = readFileSync(new URL('../layout/theme.liquid', import.meta.url), 'utf8');
+  const footer = readFileSync(new URL('../sections/footer.liquid', import.meta.url), 'utf8');
+  const header = readFileSync(new URL('../sections/header.liquid', import.meta.url), 'utf8');
+  const overlay = readFileSync(new URL('../sections/image-with-text-overlay.liquid', import.meta.url), 'utf8');
+  const productMeta = readFileSync(new URL('../snippets/product-meta.liquid', import.meta.url), 'utf8');
+
+  assert.ok(existsSync(new URL('../assets/tiny-img-link-preloader.js', import.meta.url)));
+  assert.ok(layout.includes(`{{ 'tiny-img-link-preloader.js' | asset_url }}`));
+  assert.ok(!footer.includes('Powered By'));
+  assert.ok(header.includes('<h1 class="Header__Logo">'));
+  assert.ok(overlay.includes('<h2 class="SectionHeader__Heading Heading u-h1">'));
+  assert.ok(productMeta.includes('<h1 class="ProductMeta__Title Heading u-h2">'));
+});
