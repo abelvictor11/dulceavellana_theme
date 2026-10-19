@@ -13,17 +13,44 @@ const schema = JSON.parse(schemaMatch[1]);
 const settingIds = new Set(schema.settings.filter((setting) => setting.id).map((setting) => setting.id));
 const blockTypes = new Map(schema.blocks.map((block) => [block.type, block]));
 
-test('menu schema exposes category and manually configurable item blocks', () => {
-  assert.deepEqual([...blockTypes.keys()], ['category', 'item']);
+test('menu schema exposes category, configurable item and simple item blocks', () => {
+  assert.deepEqual([...blockTypes.keys()], ['category', 'item', 'item_simple']);
 
   const itemSettingIds = new Set(blockTypes.get('item').settings.map((setting) => setting.id));
   for (const id of [
-    'title', 'badge', 'image', 'short_description', 'description', 'base_price',
+    'title', 'badge', 'image', 'show_image', 'short_description', 'description', 'base_price',
     'option_1_name', 'option_1_price', 'option_4_name', 'option_4_price',
     'gallery_image_1', 'gallery_image_3'
   ]) {
     assert.ok(itemSettingIds.has(id), `missing item setting: ${id}`);
   }
+  assert.equal(blockTypes.get('item').settings.find((s) => s.id === 'show_image').default, true);
+});
+
+test('simple item exposes only text and price, no image or variation settings', () => {
+  const simple = blockTypes.get('item_simple');
+  const simpleIds = new Set(simple.settings.filter((s) => s.id).map((s) => s.id));
+  assert.deepEqual([...simpleIds], ['title', 'badge', 'short_description', 'base_price']);
+  for (const forbidden of ['image', 'option_1_name', 'additions_behavior', 'gallery_image_1']) {
+    assert.ok(!simpleIds.has(forbidden), `simple item must not expose: ${forbidden}`);
+  }
+  assert.ok(sectionSource.includes("block.type == 'item_simple'"), 'missing item_simple render branch');
+  assert.ok(sectionSource.includes('show_item_media'), 'missing optional image flag');
+  assert.ok(sectionSource.includes('MenuDialog__Layout--noMedia'), 'missing no-media modal layout');
+});
+
+test('additions groups support up to twelve options in categories and items', () => {
+  const category = new Map(blockTypes.get('category').settings.filter((s) => s.id).map((s) => [s.id, s]));
+  const item = new Map(blockTypes.get('item').settings.filter((s) => s.id).map((s) => [s.id, s]));
+  for (const id of ['addition_12_name', 'addition_12_price', 'secondary_addition_12_name', 'secondary_addition_12_price']) {
+    assert.ok(category.has(id), `missing category addition: ${id}`);
+  }
+  for (const id of ['custom_addition_12_name', 'custom_addition_12_price', 'custom_secondary_addition_12_name', 'custom_secondary_addition_12_price']) {
+    assert.ok(item.has(id), `missing item addition: ${id}`);
+  }
+  for (const id of ['additions_max', 'secondary_additions_max']) assert.equal(category.get(id).max, 12, `${id} must allow 12`);
+  for (const id of ['custom_additions_max', 'custom_secondary_additions_max']) assert.equal(item.get(id).max, 12, `${id} must allow 12`);
+  assert.ok(sectionSource.includes('(1..12)'), 'render loops must iterate up to 12 additions');
 });
 
 test('categories and items expose inherited additions with numeric prices', () => {
