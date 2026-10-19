@@ -53,6 +53,19 @@ test('additions groups support up to twelve options in categories and items', ()
   assert.ok(sectionSource.includes('(1..12)'), 'render loops must iterate up to 12 additions');
 });
 
+test('category and item expose a third additions group that renders independently', () => {
+  const category = new Map(blockTypes.get('category').settings.filter((s) => s.id).map((s) => [s.id, s]));
+  const item = new Map(blockTypes.get('item').settings.filter((s) => s.id).map((s) => [s.id, s]));
+  for (const id of ['tertiary_additions_title', 'tertiary_additions_min', 'tertiary_additions_max', 'tertiary_addition_1_name', 'tertiary_addition_12_name', 'tertiary_addition_12_price']) {
+    assert.ok(category.has(id), `missing tertiary category setting: ${id}`);
+  }
+  for (const id of ['tertiary_additions_behavior', 'custom_tertiary_additions_title', 'custom_tertiary_additions_max', 'custom_tertiary_addition_1_name', 'custom_tertiary_addition_12_name', 'custom_tertiary_addition_12_price']) {
+    assert.ok(item.has(id), `missing tertiary item setting: ${id}`);
+  }
+  assert.equal(category.get('tertiary_additions_max').max, 12, 'tertiary max must allow 12');
+  assert.ok(sectionSource.includes('data-additions-group="tertiary"'), 'missing tertiary render group');
+});
+
 test('categories and items expose inherited additions with numeric prices', () => {
   const category = new Map(blockTypes.get('category').settings.filter((s) => s.id).map((s) => [s.id, s]));
   const item = new Map(blockTypes.get('item').settings.filter((s) => s.id).map((s) => [s.id, s]));

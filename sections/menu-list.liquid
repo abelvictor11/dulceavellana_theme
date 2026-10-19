@@ -459,6 +459,18 @@
           {%- assign secondary_help_key = secondary_additions_prefix | append: 'additions_help' -%}
           {%- assign secondary_min_key = secondary_additions_prefix | append: 'additions_min' -%}
           {%- assign secondary_max_key = secondary_additions_prefix | append: 'additions_max' -%}
+          {%- assign tertiary_additions_source = category_additions -%}
+          {%- assign tertiary_additions_prefix = 'tertiary_' -%}
+          {%- if block.settings.tertiary_additions_behavior == 'custom' -%}
+            {%- assign tertiary_additions_source = block.settings -%}
+            {%- assign tertiary_additions_prefix = 'custom_tertiary_' -%}
+          {%- elsif block.settings.tertiary_additions_behavior == 'none' -%}
+            {%- assign tertiary_additions_source = nil -%}
+          {%- endif -%}
+          {%- assign tertiary_title_key = tertiary_additions_prefix | append: 'additions_title' -%}
+          {%- assign tertiary_help_key = tertiary_additions_prefix | append: 'additions_help' -%}
+          {%- assign tertiary_min_key = tertiary_additions_prefix | append: 'additions_min' -%}
+          {%- assign tertiary_max_key = tertiary_additions_prefix | append: 'additions_max' -%}
           {%- assign show_item_media = true -%}
           {%- if block.settings.show_image == false -%}{%- assign show_item_media = false -%}{%- endif -%}
           <article class="MenuItem{% unless show_item_media %} MenuItem--noMedia{% endunless %}" data-menu-item {{ block.shopify_attributes }}>
@@ -562,6 +574,24 @@
                           {%- assign price_key = secondary_additions_prefix | append: 'addition_' | append: index | append: '_price' -%}
                           {%- assign addition_name = secondary_additions_source[name_key] -%}
                           {%- assign addition_price = secondary_additions_source[price_key] | default: 0 -%}
+                          {%- if addition_name != blank -%}<label class="MenuDialog__Option"><span><input type="checkbox" data-menu-addition data-price="{{ addition_price }}"> {{ addition_name | escape }}</span><span class="MenuDialog__OptionPrice" data-format-price="{{ addition_price }}" data-addition-price></span></label>{%- endif -%}
+                        {%- endfor -%}
+                        <p data-menu-selection-status aria-live="polite"></p>
+                      </fieldset>
+                    {%- endif -%}
+                  {%- endif -%}
+                  {%- if tertiary_additions_source != nil -%}
+                    {%- assign tertiary_has_options = false -%}
+                    {%- for index in (1..12) -%}{%- assign key = tertiary_additions_prefix | append: 'addition_' | append: index | append: '_name' -%}{%- if tertiary_additions_source[key] != blank -%}{%- assign tertiary_has_options = true -%}{%- endif -%}{%- endfor -%}
+                    {%- if tertiary_has_options -%}
+                      <fieldset class="MenuDialog__Options" data-menu-additions data-additions-group="tertiary" data-min="{{ tertiary_additions_source[tertiary_min_key] | default: 0 }}" data-max="{{ tertiary_additions_source[tertiary_max_key] | default: 3 }}">
+                        <legend class="MenuDialog__OptionsTitle Heading">{{ tertiary_additions_source[tertiary_title_key] | default: 'Más adiciones' | escape }}</legend>
+                        {%- if tertiary_additions_source[tertiary_help_key] != blank -%}<p>{{ tertiary_additions_source[tertiary_help_key] | escape }}</p>{%- endif -%}
+                        {%- for index in (1..12) -%}
+                          {%- assign name_key = tertiary_additions_prefix | append: 'addition_' | append: index | append: '_name' -%}
+                          {%- assign price_key = tertiary_additions_prefix | append: 'addition_' | append: index | append: '_price' -%}
+                          {%- assign addition_name = tertiary_additions_source[name_key] -%}
+                          {%- assign addition_price = tertiary_additions_source[price_key] | default: 0 -%}
                           {%- if addition_name != blank -%}<label class="MenuDialog__Option"><span><input type="checkbox" data-menu-addition data-price="{{ addition_price }}"> {{ addition_name | escape }}</span><span class="MenuDialog__OptionPrice" data-format-price="{{ addition_price }}" data-addition-price></span></label>{%- endif -%}
                         {%- endfor -%}
                         <p data-menu-selection-status aria-live="polite"></p>
@@ -796,7 +826,24 @@
         { "type": "text", "id": "secondary_addition_9_name", "label": "Especial 9" }, { "type": "number", "id": "secondary_addition_9_price", "label": "Precio especial 9", "default": 0 },
         { "type": "text", "id": "secondary_addition_10_name", "label": "Especial 10" }, { "type": "number", "id": "secondary_addition_10_price", "label": "Precio especial 10", "default": 0 },
         { "type": "text", "id": "secondary_addition_11_name", "label": "Especial 11" }, { "type": "number", "id": "secondary_addition_11_price", "label": "Precio especial 11", "default": 0 },
-        { "type": "text", "id": "secondary_addition_12_name", "label": "Especial 12" }, { "type": "number", "id": "secondary_addition_12_price", "label": "Precio especial 12", "default": 0 }
+        { "type": "text", "id": "secondary_addition_12_name", "label": "Especial 12" }, { "type": "number", "id": "secondary_addition_12_price", "label": "Precio especial 12", "default": 0 },
+        { "type": "header", "content": "Adiciones adicionales (3er grupo)" },
+        { "type": "text", "id": "tertiary_additions_title", "label": "Título", "default": "Más adiciones" },
+        { "type": "text", "id": "tertiary_additions_help", "label": "Texto de ayuda" },
+        { "type": "range", "id": "tertiary_additions_min", "label": "Mínimo", "min": 0, "max": 12, "step": 1, "default": 0 },
+        { "type": "range", "id": "tertiary_additions_max", "label": "Máximo", "min": 1, "max": 12, "step": 1, "default": 3 },
+        { "type": "text", "id": "tertiary_addition_1_name", "label": "Adicional 1" }, { "type": "number", "id": "tertiary_addition_1_price", "label": "Precio adicional 1", "default": 0 },
+        { "type": "text", "id": "tertiary_addition_2_name", "label": "Adicional 2" }, { "type": "number", "id": "tertiary_addition_2_price", "label": "Precio adicional 2", "default": 0 },
+        { "type": "text", "id": "tertiary_addition_3_name", "label": "Adicional 3" }, { "type": "number", "id": "tertiary_addition_3_price", "label": "Precio adicional 3", "default": 0 },
+        { "type": "text", "id": "tertiary_addition_4_name", "label": "Adicional 4" }, { "type": "number", "id": "tertiary_addition_4_price", "label": "Precio adicional 4", "default": 0 },
+        { "type": "text", "id": "tertiary_addition_5_name", "label": "Adicional 5" }, { "type": "number", "id": "tertiary_addition_5_price", "label": "Precio adicional 5", "default": 0 },
+        { "type": "text", "id": "tertiary_addition_6_name", "label": "Adicional 6" }, { "type": "number", "id": "tertiary_addition_6_price", "label": "Precio adicional 6", "default": 0 },
+        { "type": "text", "id": "tertiary_addition_7_name", "label": "Adicional 7" }, { "type": "number", "id": "tertiary_addition_7_price", "label": "Precio adicional 7", "default": 0 },
+        { "type": "text", "id": "tertiary_addition_8_name", "label": "Adicional 8" }, { "type": "number", "id": "tertiary_addition_8_price", "label": "Precio adicional 8", "default": 0 },
+        { "type": "text", "id": "tertiary_addition_9_name", "label": "Adicional 9" }, { "type": "number", "id": "tertiary_addition_9_price", "label": "Precio adicional 9", "default": 0 },
+        { "type": "text", "id": "tertiary_addition_10_name", "label": "Adicional 10" }, { "type": "number", "id": "tertiary_addition_10_price", "label": "Precio adicional 10", "default": 0 },
+        { "type": "text", "id": "tertiary_addition_11_name", "label": "Adicional 11" }, { "type": "number", "id": "tertiary_addition_11_price", "label": "Precio adicional 11", "default": 0 },
+        { "type": "text", "id": "tertiary_addition_12_name", "label": "Adicional 12" }, { "type": "number", "id": "tertiary_addition_12_price", "label": "Precio adicional 12", "default": 0 }
       ]
     },
     {
@@ -863,6 +910,24 @@
         { "type": "text", "id": "custom_secondary_addition_10_name", "label": "Especial propia 10" }, { "type": "number", "id": "custom_secondary_addition_10_price", "label": "Precio especial propio 10", "default": 0 },
         { "type": "text", "id": "custom_secondary_addition_11_name", "label": "Especial propia 11" }, { "type": "number", "id": "custom_secondary_addition_11_price", "label": "Precio especial propio 11", "default": 0 },
         { "type": "text", "id": "custom_secondary_addition_12_name", "label": "Especial propia 12" }, { "type": "number", "id": "custom_secondary_addition_12_price", "label": "Precio especial propio 12", "default": 0 },
+        { "type": "header", "content": "Adiciones adicionales del ítem (3er grupo)" },
+        { "type": "select", "id": "tertiary_additions_behavior", "label": "Comportamiento del 3er grupo", "options": [{ "value": "inherit", "label": "Heredar de categoría" }, { "value": "none", "label": "Sin este grupo" }, { "value": "custom", "label": "Propias" }], "default": "inherit" },
+        { "type": "text", "id": "custom_tertiary_additions_title", "label": "Título propio", "default": "Más adiciones" },
+        { "type": "text", "id": "custom_tertiary_additions_help", "label": "Ayuda propia" },
+        { "type": "range", "id": "custom_tertiary_additions_min", "label": "Mínimo propio", "min": 0, "max": 12, "step": 1, "default": 0 },
+        { "type": "range", "id": "custom_tertiary_additions_max", "label": "Máximo propio", "min": 1, "max": 12, "step": 1, "default": 3 },
+        { "type": "text", "id": "custom_tertiary_addition_1_name", "label": "Adicional propia 1" }, { "type": "number", "id": "custom_tertiary_addition_1_price", "label": "Precio propio 1", "default": 0 },
+        { "type": "text", "id": "custom_tertiary_addition_2_name", "label": "Adicional propia 2" }, { "type": "number", "id": "custom_tertiary_addition_2_price", "label": "Precio propio 2", "default": 0 },
+        { "type": "text", "id": "custom_tertiary_addition_3_name", "label": "Adicional propia 3" }, { "type": "number", "id": "custom_tertiary_addition_3_price", "label": "Precio propio 3", "default": 0 },
+        { "type": "text", "id": "custom_tertiary_addition_4_name", "label": "Adicional propia 4" }, { "type": "number", "id": "custom_tertiary_addition_4_price", "label": "Precio propio 4", "default": 0 },
+        { "type": "text", "id": "custom_tertiary_addition_5_name", "label": "Adicional propia 5" }, { "type": "number", "id": "custom_tertiary_addition_5_price", "label": "Precio propio 5", "default": 0 },
+        { "type": "text", "id": "custom_tertiary_addition_6_name", "label": "Adicional propia 6" }, { "type": "number", "id": "custom_tertiary_addition_6_price", "label": "Precio propio 6", "default": 0 },
+        { "type": "text", "id": "custom_tertiary_addition_7_name", "label": "Adicional propia 7" }, { "type": "number", "id": "custom_tertiary_addition_7_price", "label": "Precio propio 7", "default": 0 },
+        { "type": "text", "id": "custom_tertiary_addition_8_name", "label": "Adicional propia 8" }, { "type": "number", "id": "custom_tertiary_addition_8_price", "label": "Precio propio 8", "default": 0 },
+        { "type": "text", "id": "custom_tertiary_addition_9_name", "label": "Adicional propia 9" }, { "type": "number", "id": "custom_tertiary_addition_9_price", "label": "Precio propio 9", "default": 0 },
+        { "type": "text", "id": "custom_tertiary_addition_10_name", "label": "Adicional propia 10" }, { "type": "number", "id": "custom_tertiary_addition_10_price", "label": "Precio propio 10", "default": 0 },
+        { "type": "text", "id": "custom_tertiary_addition_11_name", "label": "Adicional propia 11" }, { "type": "number", "id": "custom_tertiary_addition_11_price", "label": "Precio propio 11", "default": 0 },
+        { "type": "text", "id": "custom_tertiary_addition_12_name", "label": "Adicional propia 12" }, { "type": "number", "id": "custom_tertiary_addition_12_price", "label": "Precio propio 12", "default": 0 },
         { "type": "header", "content": "Galería" },
         { "type": "image_picker", "id": "gallery_image_1", "label": "Imagen adicional 1" },
         { "type": "image_picker", "id": "gallery_image_2", "label": "Imagen adicional 2" },
