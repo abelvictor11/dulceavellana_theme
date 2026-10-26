@@ -39,6 +39,13 @@ test('simple item exposes only text and price, no image or variation settings', 
   assert.ok(sectionSource.includes('MenuDialog__Layout--noMedia'), 'missing no-media modal layout');
 });
 
+test('simple items render as compact full-width list rows', () => {
+  assert.match(sectionSource, /\.MenuItem--simple\s*\{[^}]*grid-column:\s*1\s*\/\s*-1;[^}]*\}/s);
+  assert.match(sectionSource, /\.MenuItem--simple \.MenuItem__Button--static\s*\{[^}]*height:\s*auto;[^}]*min-height:\s*0;[^}]*background:\s*transparent;[^}]*\}/s);
+  assert.match(sectionSource, /\.MenuItem--simple \.MenuItem__Content\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto;[^}]*\}/s);
+  assert.match(sectionSource, /\.MenuItem--simple \.MenuItem__Footer\s*\{[^}]*margin-top:\s*0;[^}]*padding-top:\s*0;[^}]*\}/s);
+});
+
 test('additions groups support up to twelve options in categories and items', () => {
   const category = new Map(blockTypes.get('category').settings.filter((s) => s.id).map((s) => [s.id, s]));
   const item = new Map(blockTypes.get('item').settings.filter((s) => s.id).map((s) => [s.id, s]));
