@@ -212,12 +212,46 @@
     white-space: nowrap;
   }
   #Menu-{{ uid }} .MenuItem__Button--static { cursor: default; }
+  #Menu-{{ uid }} .MenuItem--simple {
+    grid-column: 1 / -1;
+  }
+  #Menu-{{ uid }} .MenuItem--simple + .MenuItem--simple {
+    margin-top: calc(var(--menu-gap) * -1);
+  }
+  #Menu-{{ uid }} .MenuItem--simple .MenuItem__Button--static {
+    height: auto;
+    min-height: 0;
+    align-items: center;
+    padding: 14px 0;
+    border: 0;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+    background: transparent;
+  }
   #Menu-{{ uid }} .MenuItem--simple .MenuItem__Button--static:hover {
     transform: none;
     border-color: var(--border-color);
     box-shadow: none;
   }
-  #Menu-{{ uid }} .MenuItem--simple .MenuItem__Footer { justify-content: flex-start; }
+  #Menu-{{ uid }} .MenuItem--simple .MenuItem__Content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 24px;
+    align-items: center;
+  }
+  #Menu-{{ uid }} .MenuItem--simple .MenuItem__Badge,
+  #Menu-{{ uid }} .MenuItem--simple .MenuItem__Name,
+  #Menu-{{ uid }} .MenuItem--simple .MenuItem__Summary {
+    grid-column: 1;
+  }
+  #Menu-{{ uid }} .MenuItem--simple .MenuItem__Footer {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    align-self: center;
+    justify-content: flex-end;
+    margin-top: 0;
+    padding-top: 0;
+  }
 
   #Menu-{{ uid }} .MenuDialog {
     position: fixed;
