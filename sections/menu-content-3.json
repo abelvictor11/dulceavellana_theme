@@ -9,6 +9,7 @@
       "settings": {
         "subheading": "Nuestra carta",
         "title": "Menú",
+        "description": "",
         "heading_alignment": "center",
         "show_filter": true,
         "sticky_filter": true,
@@ -19,6 +20,8 @@
         "modal_radius": 20,
         "detail_button_label": "Ver detalles",
         "from_label": "Desde",
+        "accent_color": "",
+        "accent_text_color": "",
         "segment_role": "continuation"
       }
     }

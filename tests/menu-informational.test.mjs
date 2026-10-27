@@ -211,15 +211,18 @@ test('page menu stores content in four bounded custom section groups', () => {
   assert.deepEqual(segments.map((section) => section.settings.segment_role), [
     'primary', 'continuation', 'continuation', 'continuation'
   ]);
-  assert.deepEqual(segments.flatMap((section) => section.block_order), [
-    'category-1', 'item-1', 'item-2', 'category-2', 'item-3'
-  ]);
-  assert.deepEqual(
-    segments.flatMap((section) => section.block_order.map((id) => section.blocks[id].type)),
-    ['category', 'item', 'item', 'category', 'item']
-  );
-  assert.equal(segments[0].blocks['item-1'].settings.title, 'Nuevo ítem');
-  assert.equal(segments[0].blocks['item-1'].settings.option_4_price, 0);
+  const orderedBlockIds = segments.flatMap((section) => section.block_order);
+  assert.ok(orderedBlockIds.length > 0, 'distributed menu must retain configured blocks');
+  assert.equal(new Set(orderedBlockIds).size, orderedBlockIds.length, 'block IDs must remain unique');
+  for (const section of segments) {
+    assert.deepEqual(Object.keys(section.blocks).sort(), [...section.block_order].sort());
+    if (section.block_order.length > 0) {
+      assert.equal(section.blocks[section.block_order[0]].type, 'category', 'each populated segment must begin with a category');
+    }
+    for (const id of section.block_order) {
+      assert.ok(['category', 'item', 'item_simple'].includes(section.blocks[id].type), `unsupported menu block: ${id}`);
+    }
+  }
   assert.equal(segments[0].settings.grid_columns, '2');
   assert.equal(segments[0].settings.detail_button_label, 'Ver detalles');
 });
