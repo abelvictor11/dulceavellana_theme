@@ -5,6 +5,7 @@ import test from 'node:test';
 const sectionSource = readFileSync(new URL('../sections/menu-list.liquid', import.meta.url), 'utf8');
 const menuScript = readFileSync(new URL('../assets/menu-list.js', import.meta.url), 'utf8');
 const menuRuntimeSource = `${sectionSource}\n${menuScript}`;
+const themeLayout = readFileSync(new URL('../layout/theme.liquid', import.meta.url), 'utf8');
 const dietarySnippet = readFileSync(new URL('../snippets/menu-dietary-indicators.liquid', import.meta.url), 'utf8');
 const template = JSON.parse(readFileSync(new URL('../templates/page.menu.json', import.meta.url), 'utf8'));
 const groupUrls = [1, 2, 3, 4].map((index) => new URL(`../sections/menu-content-${index}.json`, import.meta.url));
@@ -219,4 +220,18 @@ test('page menu stores content in four bounded custom section groups', () => {
   assert.equal(segments[0].blocks['item-1'].settings.option_4_price, 0);
   assert.equal(segments[0].settings.grid_columns, '2');
   assert.equal(segments[0].settings.detail_button_label, 'Ver detalles');
+});
+
+test('layout renders distributed groups only for the menu page', () => {
+  assert.equal((themeLayout.match(/\{\{\s*content_for_layout\s*\}\}/g) || []).length, 1);
+  const menuBranch = themeLayout.match(/{%-?\s*if template\.name == 'page' and template\.suffix == 'menu'\s*-?%}([\s\S]*?){%-?\s*endif\s*-?%}/);
+  assert.ok(menuBranch, 'missing page.menu-only layout branch');
+  assert.ok(menuBranch[1].includes('data-menu-page'));
+  for (const index of [1, 2, 3, 4]) {
+    const tag = `{% sections 'menu-content-${index}' %}`;
+    assert.equal((themeLayout.match(new RegExp(`\\{% sections 'menu-content-${index}' %\\}`, 'g')) || []).length, 1);
+    assert.ok(menuBranch[1].includes(tag), `missing conditional group: ${tag}`);
+  }
+  const outsideMenuBranch = themeLayout.replace(menuBranch[0], '');
+  assert.doesNotMatch(outsideMenuBranch, /menu-content-[1-4]/);
 });
