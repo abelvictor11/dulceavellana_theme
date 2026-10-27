@@ -3,6 +3,8 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import test from 'node:test';
 
 const sectionSource = readFileSync(new URL('../sections/menu-list.liquid', import.meta.url), 'utf8');
+const menuScript = readFileSync(new URL('../assets/menu-list.js', import.meta.url), 'utf8');
+const menuRuntimeSource = `${sectionSource}\n${menuScript}`;
 const dietarySnippet = readFileSync(new URL('../snippets/menu-dietary-indicators.liquid', import.meta.url), 'utf8');
 const template = JSON.parse(readFileSync(new URL('../templates/page.menu.json', import.meta.url), 'utf8'));
 const groupUrls = [1, 2, 3, 4].map((index) => new URL(`../sections/menu-content-${index}.json`, import.meta.url));
@@ -94,7 +96,7 @@ test('schema exposes an independent secondary additions group', () => {
 });
 
 test('markup and calculator support primary and secondary groups independently', () => {
-  for (const value of ['data-additions-group="primary"', 'data-additions-group="secondary"', "querySelectorAll('[data-menu-additions]')"]) assert.ok(sectionSource.includes(value), `missing multiple group behavior: ${value}`);
+  for (const value of ['data-additions-group="primary"', 'data-additions-group="secondary"', "querySelectorAll('[data-menu-additions]')"]) assert.ok(menuRuntimeSource.includes(value), `missing multiple group behavior: ${value}`);
 });
 
 test('desktop modal keeps gallery fixed and scrolls only its content column', () => {
@@ -102,7 +104,7 @@ test('desktop modal keeps gallery fixed and scrolls only its content column', ()
 });
 
 test('estimated total falls back to base price when no named presentation exists', () => {
-  assert.ok(sectionSource.includes('function getBasePrice(dialog)'), 'missing base-price fallback');
+  assert.ok(menuRuntimeSource.includes('function getBasePrice(dialog)'), 'missing base-price fallback');
   assert.doesNotMatch(sectionSource, /option_name != blank or option_price != blank/);
 });
 
@@ -133,7 +135,7 @@ test('dietary indicators use the supplied optimized SVG artwork', () => {
 });
 
 test('menu renders an accessible additions calculator contract', () => {
-  for (const value of ['type="radio"', 'type="checkbox"', 'data-menu-presentation', 'data-menu-addition', 'data-menu-total', 'data-menu-selection-status', 'aria-live="polite"', 'function formatMoney', 'function updateEstimate', 'function resetConfigurator']) assert.ok(sectionSource.includes(value), `missing additions behavior: ${value}`);
+  for (const value of ['type="radio"', 'type="checkbox"', 'data-menu-presentation', 'data-menu-addition', 'data-menu-total', 'data-menu-selection-status', 'aria-live="polite"', 'function formatMoney', 'function updateEstimate', 'function resetConfigurator']) assert.ok(menuRuntimeSource.includes(value), `missing additions behavior: ${value}`);
 });
 
 test('menu section exposes the agreed presentation controls', () => {
@@ -160,8 +162,29 @@ test('menu markup contains accessible dialog and gallery contracts', () => {
     'role="dialog"', 'aria-modal="true"', 'shopify:section:load',
     'shopify:section:unload', 'MenuModalOpen'
   ]) {
-    assert.ok(sectionSource.includes(required), `missing markup or behavior: ${required}`);
+    assert.ok(menuRuntimeSource.includes(required), `missing markup or behavior: ${required}`);
   }
+});
+
+test('distributed menu segments initialize as one editor-safe interface', () => {
+  const segmentRole = schema.settings.find((setting) => setting.id === 'segment_role');
+  assert.equal(segmentRole.type, 'select');
+  assert.deepEqual(segmentRole.options.map((option) => option.value), ['primary', 'continuation']);
+  assert.equal(segmentRole.default, 'primary');
+  assert.ok(sectionSource.includes('data-menu-segment="{{ segment_role }}"'));
+  assert.ok(sectionSource.includes("section.settings.segment_role == 'continuation'"));
+  assert.ok(sectionSource.includes('data-menu-category-label='));
+  assert.ok(sectionSource.includes("'menu-list.js' | asset_url"));
+  assert.match(menuScript, /if \(window\.DulceAvellanaMenu\) return;/);
+  assert.match(menuScript, /window\.DulceAvellanaMenu\s*=\s*\{\s*init:/);
+  for (const eventName of [
+    'DOMContentLoaded', 'shopify:section:load', 'shopify:section:unload',
+    'shopify:section:reorder', 'shopify:block:select'
+  ]) {
+    assert.ok(menuScript.includes(eventName), `missing editor-safe event: ${eventName}`);
+  }
+  assert.ok(menuScript.includes("dataset.menuInitialized === 'true'"));
+  assert.ok(menuScript.includes('data-menu-filter-generated'));
 });
 
 test('page menu stores content in four bounded custom section groups', () => {
