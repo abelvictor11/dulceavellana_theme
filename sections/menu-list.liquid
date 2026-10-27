@@ -4,6 +4,9 @@
 {%- endcomment -%}
 
 {%- assign uid = section.id -%}
+{%- assign segment_role = section.settings.segment_role | default: 'primary' -%}
+{%- assign is_continuation = false -%}
+{%- if section.settings.segment_role == 'continuation' -%}{%- assign is_continuation = true -%}{%- endif -%}
 {%- assign has_named_category = false -%}
 
 <style>
@@ -15,6 +18,7 @@
     --menu-image-size: {{ section.settings.image_size }}px;
     --menu-gap: 20px;
   }
+  #Menu-{{ uid }}.MenuSection--continuation { padding-top: 0; }
 
   html.MenuModalOpen,
   html.MenuModalOpen body { overflow: hidden; }
@@ -412,7 +416,9 @@
   }
 </style>
 
-<section id="Menu-{{ uid }}" class="Section Section--spacingNormal MenuSection" data-section-id="{{ uid }}" data-section-type="menu-list">
+{%- if section.blocks.size > 0 or is_continuation == false or request.design_mode -%}
+<section id="Menu-{{ uid }}" class="Section Section--spacingNormal MenuSection{% if is_continuation %} MenuSection--continuation{% endif %}" data-section-id="{{ uid }}" data-section-type="menu-list" data-menu-segment="{{ segment_role }}">
+  {%- unless is_continuation -%}
   <div class="Container">
     {%- if section.settings.title != blank or section.settings.description != blank or section.settings.subheading != blank -%}
       <header class="MenuSection__Intro MenuSection__Intro--{{ section.settings.heading_alignment }}">
@@ -426,10 +432,10 @@
   {%- if section.settings.show_filter -%}
     <nav class="MenuFilter" data-menu-filter aria-label="Categorías del menú">
       <div class="Container">
-        <div class="MenuFilter__Track">
+        <div class="MenuFilter__Track" data-menu-filter-track>
           {%- for block in section.blocks -%}
             {%- if block.type == 'category' and block.settings.title != blank -%}
-              <button type="button" class="MenuFilter__Item{% unless has_named_category %} is-active{% endunless %}" data-filter-target="MenuCategory-{{ uid }}-{{ block.id }}">
+              <button type="button" class="MenuFilter__Item{% unless has_named_category %} is-active{% endunless %}" data-filter-target="MenuCategory-{{ uid }}-{{ block.id }}" data-menu-filter-generated>
                 {{ block.settings.title | escape }}
               </button>
               {%- assign has_named_category = true -%}
@@ -439,6 +445,7 @@
       </div>
     </nav>
   {%- endif -%}
+  {%- endunless -%}
 
   <div class="Container">
     {%- if section.blocks.size == 0 -%}
@@ -450,7 +457,7 @@
           {%- assign category_additions = block.settings -%}
           {%- if category_open -%}</div></div>{%- endif -%}
           {%- assign category_open = true -%}
-          <div class="MenuCategory" id="MenuCategory-{{ uid }}-{{ block.id }}" data-menu-category {{ block.shopify_attributes }}>
+          <div class="MenuCategory" id="MenuCategory-{{ uid }}-{{ block.id }}" data-menu-category data-menu-category-label="{{ block.settings.title | default: section.settings.general_category_label | escape }}" {{ block.shopify_attributes }}>
             <header class="MenuCategory__Header">
               <h3 class="MenuCategory__Title Heading u-h2">{{ block.settings.title | default: section.settings.general_category_label | escape }}</h3>
               {%- if block.settings.description != blank -%}<p class="MenuCategory__Description">{{ block.settings.description | escape }}</p>{%- endif -%}
@@ -459,7 +466,7 @@
         {%- elsif block.type == 'item' and block.settings.title != blank -%}
           {%- unless category_open -%}
             {%- assign category_open = true -%}
-            <div class="MenuCategory" id="MenuCategory-{{ uid }}-general" data-menu-category>
+            <div class="MenuCategory" id="MenuCategory-{{ uid }}-general" data-menu-category data-menu-category-label="{{ section.settings.general_category_label | escape }}">
               <header class="MenuCategory__Header"><h3 class="MenuCategory__Title Heading u-h2">{{ section.settings.general_category_label | escape }}</h3></header>
               <div class="MenuGrid">
           {%- endunless -%}
@@ -640,7 +647,7 @@
         {%- elsif block.type == 'item_simple' and block.settings.title != blank -%}
           {%- unless category_open -%}
             {%- assign category_open = true -%}
-            <div class="MenuCategory" id="MenuCategory-{{ uid }}-general" data-menu-category>
+            <div class="MenuCategory" id="MenuCategory-{{ uid }}-general" data-menu-category data-menu-category-label="{{ section.settings.general_category_label | escape }}">
               <header class="MenuCategory__Header"><h3 class="MenuCategory__Title Heading u-h2">{{ section.settings.general_category_label | escape }}</h3></header>
               <div class="MenuGrid">
           {%- endunless -%}
@@ -662,144 +669,14 @@
     {%- endif -%}
   </div>
 </section>
-
-<script>
-  (function () {
-    function initMenu(root) {
-      if (!root || root.dataset.menuInitialized === 'true') return;
-      root.dataset.menuInitialized = 'true';
-      var activeTrigger = null;
-
-      function focusable(dialog) {
-        return Array.prototype.slice.call(dialog.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'));
-      }
-      function openDialog(dialog, trigger) {
-        if (!dialog) return;
-        activeTrigger = trigger;
-        dialog.classList.add('is-open');
-        dialog.setAttribute('aria-hidden', 'false');
-        document.documentElement.classList.add('MenuModalOpen');
-        var close = dialog.querySelector('[data-menu-close]');
-        updateEstimate(dialog);
-        if (close) close.focus();
-      }
-      function formatMoney(value) {
-        return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(value) || 0);
-      }
-      function normalizeLimits(group) {
-        var count = group.querySelectorAll('[data-menu-addition]').length;
-        var max = Math.min(Math.max(Number(group.dataset.max) || 1, 1), count || 1);
-        var min = Math.min(Math.max(Number(group.dataset.min) || 0, 0), max);
-        return { min: min, max: max };
-      }
-      function getBasePrice(dialog) {
-        var selected = dialog.querySelector('[data-menu-presentation]:checked');
-        var totalNode = dialog.querySelector('[data-menu-total]');
-        return selected ? Number(selected.dataset.price) || 0 : Number(totalNode && totalNode.dataset.basePrice) || 0;
-      }
-      function updateEstimate(dialog) {
-        if (!dialog) return;
-        dialog.querySelectorAll('[data-format-price]').forEach(function (el) {
-          var value = Number(el.dataset.formatPrice) || 0;
-          el.textContent = el.hasAttribute('data-addition-price') ? (value ? '+ ' + formatMoney(value) : 'Sin costo') : formatMoney(value);
-        });
-        var totalNode = dialog.querySelector('[data-menu-total]');
-        var total = getBasePrice(dialog);
-        var groups = dialog.querySelectorAll('[data-menu-additions]');
-        groups.forEach(function (group) {
-          var limits = normalizeLimits(group);
-          var additions = Array.prototype.slice.call(group.querySelectorAll('[data-menu-addition]'));
-          var selected = additions.filter(function (input) { return input.checked; });
-          selected.forEach(function (input) { total += Number(input.dataset.price) || 0; });
-          additions.forEach(function (input) { input.disabled = !input.checked && selected.length >= limits.max; });
-          var status = group.querySelector('[data-menu-selection-status]');
-          if (status) status.textContent = selected.length < limits.min ? 'Selecciona al menos ' + limits.min : selected.length + ' de ' + limits.max + ' seleccionadas';
-        });
-        if (totalNode) totalNode.textContent = 'Total estimado: ' + formatMoney(total);
-      }
-      function resetConfigurator(dialog) {
-        var radios = dialog.querySelectorAll('[data-menu-presentation]');
-        radios.forEach(function (radio, index) { radio.checked = index === 0; });
-        dialog.querySelectorAll('[data-menu-addition]').forEach(function (input) { input.checked = false; input.disabled = false; });
-        updateEstimate(dialog);
-      }
-      function closeDialog(dialog) {
-        if (!dialog) return;
-        dialog.classList.remove('is-open');
-        dialog.setAttribute('aria-hidden', 'true');
-        document.documentElement.classList.remove('MenuModalOpen');
-        resetConfigurator(dialog);
-        if (activeTrigger && document.documentElement.contains(activeTrigger)) activeTrigger.focus();
-        activeTrigger = null;
-      }
-      function selectImage(button) {
-        var dialog = button.closest('[data-menu-dialog]');
-        var image = dialog && dialog.querySelector('[data-menu-main-image]');
-        if (!image) return;
-        image.src = button.dataset.imageSrc;
-        image.srcset = button.dataset.imageSrcset || '';
-        image.alt = button.dataset.imageAlt || '';
-        dialog.querySelectorAll('[data-menu-thumbnail]').forEach(function (thumbnail) {
-          thumbnail.setAttribute('aria-pressed', thumbnail === button ? 'true' : 'false');
-        });
-      }
-      function scrollToCategory(button) {
-        var target = document.getElementById(button.dataset.filterTarget);
-        if (!target) return;
-        root.querySelectorAll('.MenuFilter__Item').forEach(function (item) { item.classList.remove('is-active'); });
-        button.classList.add('is-active');
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-
-      root.addEventListener('click', function (event) {
-        var opener = event.target.closest('[data-menu-open]');
-        var closer = event.target.closest('[data-menu-close]');
-        var thumbnail = event.target.closest('[data-menu-thumbnail]');
-        var filter = event.target.closest('[data-filter-target]');
-        var backdrop = event.target.matches('[data-menu-dialog]') ? event.target : null;
-        if (opener) openDialog(document.getElementById(opener.dataset.menuOpen), opener);
-        else if (closer) closeDialog(closer.closest('[data-menu-dialog]'));
-        else if (thumbnail) selectImage(thumbnail);
-        else if (filter) scrollToCategory(filter);
-        else if (backdrop) closeDialog(backdrop);
-      });
-
-      root.addEventListener('keydown', function (event) {
-        var dialog = event.target.closest('[data-menu-dialog].is-open');
-        if (!dialog) return;
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          closeDialog(dialog);
-          return;
-        }
-        if (event.key !== 'Tab') return;
-        var items = focusable(dialog);
-        if (!items.length) return;
-        var first = items[0];
-        var last = items[items.length - 1];
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-      });
-      root.addEventListener('change', function (event) {
-        if (event.target.matches('[data-menu-presentation], [data-menu-addition]')) updateEstimate(event.target.closest('[data-menu-dialog]'));
-      });
-    }
-
-    initMenu(document.getElementById('Menu-{{ uid }}'));
-    document.addEventListener('shopify:section:load', function (event) {
-      initMenu(event.target.querySelector('[data-section-type="menu-list"]'));
-    });
-    document.addEventListener('shopify:section:unload', function (event) {
-      if (event.target.querySelector('[data-menu-dialog].is-open')) document.documentElement.classList.remove('MenuModalOpen');
-    });
-  })();
-</script>
+{%- endif -%}
 
 {% schema %}
 {
   "name": "Menú informativo",
   "class": "shopify-section--menu",
   "settings": [
+    { "type": "select", "id": "segment_role", "label": "Parte del menú", "options": [{ "value": "primary", "label": "Principal" }, { "value": "continuation", "label": "Continuación" }], "default": "primary", "info": "Usa Principal solo en la Parte 1. Las demás partes continúan el mismo menú." },
     { "type": "header", "content": "Encabezado" },
     { "type": "text", "id": "subheading", "label": "Texto superior", "default": "Nuestra carta" },
     { "type": "text", "id": "title", "label": "Título", "default": "Menú" },

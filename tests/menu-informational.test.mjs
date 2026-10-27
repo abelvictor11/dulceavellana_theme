@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import test from 'node:test';
 
 const sectionSource = readFileSync(new URL('../sections/menu-list.liquid', import.meta.url), 'utf8');
+const menuScript = readFileSync(new URL('../assets/menu-list.js', import.meta.url), 'utf8');
+const menuRuntimeSource = `${sectionSource}\n${menuScript}`;
+const themeLayout = readFileSync(new URL('../layout/theme.liquid', import.meta.url), 'utf8');
 const dietarySnippet = readFileSync(new URL('../snippets/menu-dietary-indicators.liquid', import.meta.url), 'utf8');
 const template = JSON.parse(readFileSync(new URL('../templates/page.menu.json', import.meta.url), 'utf8'));
+const groupUrls = [1, 2, 3, 4].map((index) => new URL(`../sections/menu-content-${index}.json`, import.meta.url));
+const menuGroups = groupUrls.map((url) => JSON.parse(readFileSync(url, 'utf8')));
 const schemaMatch = sectionSource.match(/{% schema %}([\s\S]*?){% endschema %}/);
 
 assert.ok(schemaMatch, 'menu-list must expose a Shopify schema');
@@ -92,7 +97,7 @@ test('schema exposes an independent secondary additions group', () => {
 });
 
 test('markup and calculator support primary and secondary groups independently', () => {
-  for (const value of ['data-additions-group="primary"', 'data-additions-group="secondary"', "querySelectorAll('[data-menu-additions]')"]) assert.ok(sectionSource.includes(value), `missing multiple group behavior: ${value}`);
+  for (const value of ['data-additions-group="primary"', 'data-additions-group="secondary"', "querySelectorAll('[data-menu-additions]')"]) assert.ok(menuRuntimeSource.includes(value), `missing multiple group behavior: ${value}`);
 });
 
 test('desktop modal keeps gallery fixed and scrolls only its content column', () => {
@@ -100,7 +105,7 @@ test('desktop modal keeps gallery fixed and scrolls only its content column', ()
 });
 
 test('estimated total falls back to base price when no named presentation exists', () => {
-  assert.ok(sectionSource.includes('function getBasePrice(dialog)'), 'missing base-price fallback');
+  assert.ok(menuRuntimeSource.includes('function getBasePrice(dialog)'), 'missing base-price fallback');
   assert.doesNotMatch(sectionSource, /option_name != blank or option_price != blank/);
 });
 
@@ -131,7 +136,7 @@ test('dietary indicators use the supplied optimized SVG artwork', () => {
 });
 
 test('menu renders an accessible additions calculator contract', () => {
-  for (const value of ['type="radio"', 'type="checkbox"', 'data-menu-presentation', 'data-menu-addition', 'data-menu-total', 'data-menu-selection-status', 'aria-live="polite"', 'function formatMoney', 'function updateEstimate', 'function resetConfigurator']) assert.ok(sectionSource.includes(value), `missing additions behavior: ${value}`);
+  for (const value of ['type="radio"', 'type="checkbox"', 'data-menu-presentation', 'data-menu-addition', 'data-menu-total', 'data-menu-selection-status', 'aria-live="polite"', 'function formatMoney', 'function updateEstimate', 'function resetConfigurator']) assert.ok(menuRuntimeSource.includes(value), `missing additions behavior: ${value}`);
 });
 
 test('menu section exposes the agreed presentation controls', () => {
@@ -158,15 +163,81 @@ test('menu markup contains accessible dialog and gallery contracts', () => {
     'role="dialog"', 'aria-modal="true"', 'shopify:section:load',
     'shopify:section:unload', 'MenuModalOpen'
   ]) {
-    assert.ok(sectionSource.includes(required), `missing markup or behavior: ${required}`);
+    assert.ok(menuRuntimeSource.includes(required), `missing markup or behavior: ${required}`);
   }
 });
 
-test('page template seeds ordered informational blocks', () => {
-  const menu = template.sections.menu;
-  assert.equal(menu.type, 'menu-list');
-  const orderedTypes = menu.block_order.map((id) => menu.blocks[id].type);
-  assert.deepEqual(orderedTypes, ['category', 'item', 'item', 'category', 'item']);
-  assert.equal(menu.settings.grid_columns, '2');
-  assert.equal(menu.settings.detail_button_label, 'Ver detalles');
+test('distributed menu segments initialize as one editor-safe interface', () => {
+  const segmentRole = schema.settings.find((setting) => setting.id === 'segment_role');
+  assert.equal(segmentRole.type, 'select');
+  assert.deepEqual(segmentRole.options.map((option) => option.value), ['primary', 'continuation']);
+  assert.equal(segmentRole.default, 'primary');
+  assert.ok(sectionSource.includes('data-menu-segment="{{ segment_role }}"'));
+  assert.ok(sectionSource.includes("section.settings.segment_role == 'continuation'"));
+  assert.ok(sectionSource.includes('data-menu-category-label='));
+  assert.doesNotMatch(sectionSource, /'menu-list\.js' \| asset_url/);
+  assert.equal((themeLayout.match(/'menu-list\.js' \| asset_url/g) || []).length, 1);
+  assert.match(menuScript, /if \(window\.DulceAvellanaMenu\) return;/);
+  assert.match(menuScript, /window\.DulceAvellanaMenu\s*=\s*\{\s*init:/);
+  for (const eventName of [
+    'DOMContentLoaded', 'shopify:section:load', 'shopify:section:unload',
+    'shopify:section:reorder', 'shopify:block:select'
+  ]) {
+    assert.ok(menuScript.includes(eventName), `missing editor-safe event: ${eventName}`);
+  }
+  assert.ok(menuScript.includes("dataset.menuInitialized === 'true'"));
+  assert.ok(menuScript.includes('data-menu-filter-generated'));
+  assert.match(menuScript, /shopify:section:unload[\s\S]*requestAnimationFrame[\s\S]*rebuildFilter/);
+});
+
+test('page menu stores content in four bounded custom section groups', () => {
+  assert.ok(!Object.values(template.sections).some((section) => section.type === 'menu-list'));
+  assert.ok(statSync(new URL('../templates/page.menu.json', import.meta.url)).size < 512 * 1024);
+  assert.deepEqual(
+    readdirSync(new URL('../sections/', import.meta.url)).filter((name) => /^menu-content-\d+\.json$/.test(name)).sort(),
+    ['menu-content-1.json', 'menu-content-2.json', 'menu-content-3.json', 'menu-content-4.json']
+  );
+
+  const segments = menuGroups.map((group, index) => {
+    assert.equal(group.type, 'custom.menu_content');
+    assert.equal(group.name, `Menú · Parte ${index + 1}`);
+    assert.equal(group.order.length, 1);
+    assert.ok(statSync(groupUrls[index]).size < 512 * 1024);
+    const section = group.sections[group.order[0]];
+    assert.equal(section.type, 'menu-list');
+    return section;
+  });
+
+  assert.deepEqual(segments.map((section) => section.settings.segment_role), [
+    'primary', 'continuation', 'continuation', 'continuation'
+  ]);
+  const orderedBlockIds = segments.flatMap((section) => section.block_order);
+  assert.ok(orderedBlockIds.length > 0, 'distributed menu must retain configured blocks');
+  assert.equal(new Set(orderedBlockIds).size, orderedBlockIds.length, 'block IDs must remain unique');
+  for (const section of segments) {
+    assert.deepEqual(Object.keys(section.blocks).sort(), [...section.block_order].sort());
+    if (section.block_order.length > 0) {
+      assert.equal(section.blocks[section.block_order[0]].type, 'category', 'each populated segment must begin with a category');
+    }
+    for (const id of section.block_order) {
+      assert.ok(['category', 'item', 'item_simple'].includes(section.blocks[id].type), `unsupported menu block: ${id}`);
+    }
+  }
+  assert.equal(segments[0].settings.grid_columns, '2');
+  assert.equal(segments[0].settings.detail_button_label, 'Ver detalles');
+});
+
+test('layout renders distributed groups only for the menu page', () => {
+  assert.equal((themeLayout.match(/\{\{\s*content_for_layout\s*\}\}/g) || []).length, 1);
+  const menuBranch = themeLayout.match(/{%-?\s*if template\.name == 'page' and template\.suffix == 'menu'\s*-?%}([\s\S]*?){%-?\s*endif\s*-?%}/);
+  assert.ok(menuBranch, 'missing page.menu-only layout branch');
+  assert.ok(menuBranch[1].includes('data-menu-page'));
+  assert.ok(menuBranch[1].includes("'menu-list.js' | asset_url"));
+  for (const index of [1, 2, 3, 4]) {
+    const tag = `{% sections 'menu-content-${index}' %}`;
+    assert.equal((themeLayout.match(new RegExp(`\\{% sections 'menu-content-${index}' %\\}`, 'g')) || []).length, 1);
+    assert.ok(menuBranch[1].includes(tag), `missing conditional group: ${tag}`);
+  }
+  const outsideMenuBranch = themeLayout.replace(menuBranch[0], '');
+  assert.doesNotMatch(outsideMenuBranch, /menu-content-[1-4]/);
 });

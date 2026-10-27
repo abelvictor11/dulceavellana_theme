@@ -373,6 +373,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
       <main id="main" role="main">
         {{ content_for_layout }}
+        {%- if template.name == 'page' and template.suffix == 'menu' -%}
+          <div data-menu-page>
+            {% sections 'menu-content-1' %}
+            {% sections 'menu-content-2' %}
+            {% sections 'menu-content-3' %}
+            {% sections 'menu-content-4' %}
+          </div>
+          <script src="{{ 'menu-list.js' | asset_url }}" defer></script>
+        {%- endif -%}
       </main>
 
       {% section 'footer' %}
