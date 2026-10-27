@@ -63,6 +63,23 @@ test('preserves every block and setting in order', () => {
   assert.deepEqual(result.template.order, ['main']);
 });
 
+test('default migration spreads an editor-sized menu across all four groups', () => {
+  const entries = Array.from({ length: 16 }, (_, index) => [
+    `category-${index}`,
+    category(`Categoría ${index}`, 'x'.repeat(20 * 1024))
+  ]);
+
+  const result = splitMenuTemplate(sourceTemplate(entries));
+  const populatedGroups = result.groups.filter((group) => {
+    const section = group.sections[group.order[0]];
+    return section.block_order.length > 0;
+  });
+
+  assert.equal(populatedGroups.length, 4, 'large editable menus need headroom in every section group');
+  assert.ok(result.manifest.groupBytes.every((bytes) => bytes <= 100 * 1024));
+  assert.deepEqual(result.manifest.orderedBlockIds, entries.map(([id]) => id));
+});
+
 test('keeps categories atomic including leading uncategorized items', () => {
   const entries = [
     ['loose-item', item('Sin categoría', 'x'.repeat(260))],
