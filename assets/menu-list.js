@@ -166,7 +166,7 @@
   document.addEventListener('shopify:section:load', function (event) { init(event.target); });
   document.addEventListener('shopify:section:unload', function () {
     document.documentElement.classList.remove('MenuModalOpen');
-    rebuildFilter(document);
+    requestAnimationFrame(function () { rebuildFilter(document); });
   });
   document.addEventListener('shopify:section:reorder', function () { init(document); });
   document.addEventListener('shopify:block:select', function (event) {

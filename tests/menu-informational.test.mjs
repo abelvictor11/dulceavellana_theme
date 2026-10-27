@@ -175,7 +175,8 @@ test('distributed menu segments initialize as one editor-safe interface', () => 
   assert.ok(sectionSource.includes('data-menu-segment="{{ segment_role }}"'));
   assert.ok(sectionSource.includes("section.settings.segment_role == 'continuation'"));
   assert.ok(sectionSource.includes('data-menu-category-label='));
-  assert.ok(sectionSource.includes("'menu-list.js' | asset_url"));
+  assert.doesNotMatch(sectionSource, /'menu-list\.js' \| asset_url/);
+  assert.equal((themeLayout.match(/'menu-list\.js' \| asset_url/g) || []).length, 1);
   assert.match(menuScript, /if \(window\.DulceAvellanaMenu\) return;/);
   assert.match(menuScript, /window\.DulceAvellanaMenu\s*=\s*\{\s*init:/);
   for (const eventName of [
@@ -186,6 +187,7 @@ test('distributed menu segments initialize as one editor-safe interface', () => 
   }
   assert.ok(menuScript.includes("dataset.menuInitialized === 'true'"));
   assert.ok(menuScript.includes('data-menu-filter-generated'));
+  assert.match(menuScript, /shopify:section:unload[\s\S]*requestAnimationFrame[\s\S]*rebuildFilter/);
 });
 
 test('page menu stores content in four bounded custom section groups', () => {
@@ -227,6 +229,7 @@ test('layout renders distributed groups only for the menu page', () => {
   const menuBranch = themeLayout.match(/{%-?\s*if template\.name == 'page' and template\.suffix == 'menu'\s*-?%}([\s\S]*?){%-?\s*endif\s*-?%}/);
   assert.ok(menuBranch, 'missing page.menu-only layout branch');
   assert.ok(menuBranch[1].includes('data-menu-page'));
+  assert.ok(menuBranch[1].includes("'menu-list.js' | asset_url"));
   for (const index of [1, 2, 3, 4]) {
     const tag = `{% sections 'menu-content-${index}' %}`;
     assert.equal((themeLayout.match(new RegExp(`\\{% sections 'menu-content-${index}' %\\}`, 'g')) || []).length, 1);
