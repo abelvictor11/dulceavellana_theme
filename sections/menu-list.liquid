@@ -531,7 +531,7 @@
                 {%- if has_dietary -%}<span class="MenuDietary MenuDietary--card" data-menu-dietary-card>{% render 'menu-dietary-indicators', item: block.settings, compact: true %}</span>{%- endif -%}
                 {%- if block.settings.short_description != blank -%}<span class="MenuItem__Summary">{{ block.settings.short_description | escape }}</span>{%- endif -%}
                 <span class="MenuItem__Footer">
-                  {%- if block.settings.base_price != blank -%}<span class="MenuItem__Price">{% if has_options and section.settings.from_label != blank %}{{ section.settings.from_label | escape }} {% endif %}{{ block.settings.base_price | escape }}</span>{%- endif -%}
+                  {%- if block.settings.base_price != blank -%}<span class="MenuItem__Price">{% if has_options and section.settings.from_label != blank %}{{ section.settings.from_label | escape }} {% endif %}$ {{ block.settings.base_price | escape }}</span>{%- endif -%}
                   <span class="MenuItem__Detail">{{ section.settings.detail_button_label | escape }}</span>
                 </span>
               </span>
@@ -571,7 +571,7 @@
                   {%- if block.settings.badge != blank -%}<span class="MenuDialog__Badge">{{ block.settings.badge | escape }}</span>{%- endif -%}
                   <h3 id="MenuDialogTitle-{{ uid }}-{{ block.id }}" class="MenuDialog__Title Heading u-h2">{{ block.settings.title | escape }}</h3>
                   {%- if has_dietary -%}<div class="MenuDietary MenuDietary--modal" data-menu-dietary-modal>{% render 'menu-dietary-indicators', item: block.settings, compact: false %}</div>{%- endif -%}
-                  {%- if block.settings.base_price != blank -%}<div class="MenuDialog__Price">{% if has_options and section.settings.from_label != blank %}{{ section.settings.from_label | escape }} {% endif %}{{ block.settings.base_price | escape }}</div>{%- endif -%}
+                  {%- if block.settings.base_price != blank -%}<div class="MenuDialog__Price">{% if has_options and section.settings.from_label != blank %}{{ section.settings.from_label | escape }} {% endif %}$ {{ block.settings.base_price | escape }}</div>{%- endif -%}
                   {%- if block.settings.description != blank -%}<div class="MenuDialog__Description Rte">{{ block.settings.description }}</div>{%- elsif block.settings.short_description != blank -%}<p class="MenuDialog__Description">{{ block.settings.short_description | escape }}</p>{%- endif -%}
                   {%- if has_options -%}
                     <fieldset class="MenuDialog__Options">
@@ -658,7 +658,7 @@
                 <span class="MenuItem__Name">{{ block.settings.title | escape }}</span>
                 {%- if block.settings.short_description != blank -%}<span class="MenuItem__Summary">{{ block.settings.short_description | escape }}</span>{%- endif -%}
                 <span class="MenuItem__Footer">
-                  {%- if block.settings.base_price != blank -%}<span class="MenuItem__Price">{{ block.settings.base_price | escape }}</span>{%- endif -%}
+                  {%- if block.settings.base_price != blank -%}<span class="MenuItem__Price">$ {{ block.settings.base_price | escape }}</span>{%- endif -%}
                 </span>
               </span>
             </div>

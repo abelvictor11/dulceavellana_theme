@@ -5,7 +5,7 @@ import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DEFAULT_GROUP_COUNT = 4;
-const DEFAULT_TARGET_BYTES = 350 * 1024;
+const DEFAULT_TARGET_BYTES = 100 * 1024;
 const SHOPIFY_JSON_LIMIT = 512 * 1024;
 
 function byteSize(value) {
