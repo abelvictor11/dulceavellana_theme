@@ -109,6 +109,12 @@ test('estimated total falls back to base price when no named presentation exists
   assert.doesNotMatch(sectionSource, /option_name != blank or option_price != blank/);
 });
 
+test('all customer-facing menu prices use the COP dollar prefix', () => {
+  assert.equal((sectionSource.match(/\$ \{\{ block\.settings\.base_price \| escape \}\}/g) || []).length, 3);
+  assert.doesNotMatch(sectionSource, />\{\{ block\.settings\.base_price \| escape \}\}</);
+  assert.match(menuScript, /style:\s*'currency',\s*currency:\s*'COP'/);
+});
+
 test('items expose and render seven dietary indicators', () => {
   const itemIds = new Set(blockTypes.get('item').settings.filter((s) => s.id).map((s) => s.id));
   for (const id of ['contains_peanuts', 'contains_tree_nuts', 'contains_gluten', 'contains_dairy', 'is_spicy', 'is_vegetarian', 'is_vegan']) assert.ok(itemIds.has(id), `missing dietary setting: ${id}`);
