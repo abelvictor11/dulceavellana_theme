@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -147,9 +147,11 @@ function runCli(argv) {
   const result = splitMenuTemplate(source);
   const serializedTemplate = `${JSON.stringify(result.template, null, 2)}\n`;
   const serializedGroups = result.groups.map((group) => `${JSON.stringify(group, null, 2)}\n`);
+  const backupPath = join(backupDir, basename(sourcePath));
+  if (existsSync(backupPath)) throw new Error(`Backup already exists: ${backupPath}. Use a new timestamped backup directory.`);
 
   mkdirSync(backupDir, { recursive: true });
-  copyFileSync(sourcePath, join(backupDir, basename(sourcePath)));
+  copyFileSync(sourcePath, backupPath);
   mkdirSync(join(themeRoot, 'sections'), { recursive: true });
   writeFileSync(sourcePath, serializedTemplate);
   serializedGroups.forEach((content, index) => {

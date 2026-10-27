@@ -141,3 +141,31 @@ test('CLI leaves source and destinations untouched when validation fails', () =>
   assert.equal(existsSync(join(themeRoot, 'sections/menu-content-1.json')), false);
   assert.equal(existsSync(backupDir), false);
 });
+
+test('CLI refuses to overwrite an existing backup before mutating the theme', () => {
+  const root = mkdtempSync(join(tmpdir(), 'menu-migration-backup-test-'));
+  const themeRoot = join(root, 'theme');
+  const templatesDir = join(themeRoot, 'templates');
+  const backupDir = join(root, 'backup');
+  mkdirSync(templatesDir, { recursive: true });
+  mkdirSync(join(themeRoot, 'sections'), { recursive: true });
+  mkdirSync(backupDir, { recursive: true });
+  const sourcePath = join(templatesDir, 'page.menu.json');
+  const original = `${JSON.stringify(sourceTemplate([['category-a', category('A')]]), null, 2)}\n`;
+  const sentinel = 'existing backup';
+  writeFileSync(sourcePath, original);
+  writeFileSync(join(backupDir, 'page.menu.json'), sentinel);
+
+  const run = spawnSync(process.execPath, [
+    new URL('../scripts/migrate-menu-template.mjs', import.meta.url).pathname,
+    '--source', sourcePath,
+    '--theme-root', themeRoot,
+    '--backup-dir', backupDir
+  ], { encoding: 'utf8' });
+
+  assert.notEqual(run.status, 0);
+  assert.match(run.stderr, /backup already exists/i);
+  assert.equal(readFileSync(sourcePath, 'utf8'), original);
+  assert.equal(readFileSync(join(backupDir, 'page.menu.json'), 'utf8'), sentinel);
+  assert.equal(existsSync(join(themeRoot, 'sections/menu-content-1.json')), false);
+});
