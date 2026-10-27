@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import test from 'node:test';
 
 const sectionSource = readFileSync(new URL('../sections/menu-list.liquid', import.meta.url), 'utf8');
 const dietarySnippet = readFileSync(new URL('../snippets/menu-dietary-indicators.liquid', import.meta.url), 'utf8');
 const template = JSON.parse(readFileSync(new URL('../templates/page.menu.json', import.meta.url), 'utf8'));
+const groupUrls = [1, 2, 3, 4].map((index) => new URL(`../sections/menu-content-${index}.json`, import.meta.url));
+const menuGroups = groupUrls.map((url) => JSON.parse(readFileSync(url, 'utf8')));
 const schemaMatch = sectionSource.match(/{% schema %}([\s\S]*?){% endschema %}/);
 
 assert.ok(schemaMatch, 'menu-list must expose a Shopify schema');
@@ -162,11 +164,36 @@ test('menu markup contains accessible dialog and gallery contracts', () => {
   }
 });
 
-test('page template seeds ordered informational blocks', () => {
-  const menu = template.sections.menu;
-  assert.equal(menu.type, 'menu-list');
-  const orderedTypes = menu.block_order.map((id) => menu.blocks[id].type);
-  assert.deepEqual(orderedTypes, ['category', 'item', 'item', 'category', 'item']);
-  assert.equal(menu.settings.grid_columns, '2');
-  assert.equal(menu.settings.detail_button_label, 'Ver detalles');
+test('page menu stores content in four bounded custom section groups', () => {
+  assert.ok(!Object.values(template.sections).some((section) => section.type === 'menu-list'));
+  assert.ok(statSync(new URL('../templates/page.menu.json', import.meta.url)).size < 512 * 1024);
+  assert.deepEqual(
+    readdirSync(new URL('../sections/', import.meta.url)).filter((name) => /^menu-content-\d+\.json$/.test(name)).sort(),
+    ['menu-content-1.json', 'menu-content-2.json', 'menu-content-3.json', 'menu-content-4.json']
+  );
+
+  const segments = menuGroups.map((group, index) => {
+    assert.equal(group.type, 'custom.menu_content');
+    assert.equal(group.name, `Menú · Parte ${index + 1}`);
+    assert.equal(group.order.length, 1);
+    assert.ok(statSync(groupUrls[index]).size < 512 * 1024);
+    const section = group.sections[group.order[0]];
+    assert.equal(section.type, 'menu-list');
+    return section;
+  });
+
+  assert.deepEqual(segments.map((section) => section.settings.segment_role), [
+    'primary', 'continuation', 'continuation', 'continuation'
+  ]);
+  assert.deepEqual(segments.flatMap((section) => section.block_order), [
+    'category-1', 'item-1', 'item-2', 'category-2', 'item-3'
+  ]);
+  assert.deepEqual(
+    segments.flatMap((section) => section.block_order.map((id) => section.blocks[id].type)),
+    ['category', 'item', 'item', 'category', 'item']
+  );
+  assert.equal(segments[0].blocks['item-1'].settings.title, 'Nuevo ítem');
+  assert.equal(segments[0].blocks['item-1'].settings.option_4_price, 0);
+  assert.equal(segments[0].settings.grid_columns, '2');
+  assert.equal(segments[0].settings.detail_button_label, 'Ver detalles');
 });

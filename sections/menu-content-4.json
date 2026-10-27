@@ -1,0 +1,29 @@
+{
+  "type": "custom.menu_content",
+  "name": "Menú · Parte 4",
+  "sections": {
+    "menu4": {
+      "type": "menu-list",
+      "blocks": {},
+      "block_order": [],
+      "settings": {
+        "subheading": "Nuestra carta",
+        "title": "Menú",
+        "heading_alignment": "center",
+        "show_filter": true,
+        "sticky_filter": true,
+        "general_category_label": "Otros",
+        "grid_columns": "2",
+        "image_size": 132,
+        "card_radius": 18,
+        "modal_radius": 20,
+        "detail_button_label": "Ver detalles",
+        "from_label": "Desde",
+        "segment_role": "continuation"
+      }
+    }
+  },
+  "order": [
+    "menu4"
+  ]
+}

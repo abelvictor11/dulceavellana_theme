@@ -1,0 +1,104 @@
+{
+  "type": "custom.menu_content",
+  "name": "Menú · Parte 1",
+  "sections": {
+    "menu1": {
+      "type": "menu-list",
+      "blocks": {
+        "category-1": {
+          "type": "category",
+          "settings": {
+            "title": "Categoría",
+            "description": ""
+          }
+        },
+        "item-1": {
+          "type": "item",
+          "settings": {
+            "title": "Nuevo ítem",
+            "badge": "",
+            "short_description": "",
+            "description": "",
+            "base_price": 0,
+            "option_1_name": "",
+            "option_1_price": 0,
+            "option_2_name": "",
+            "option_2_price": 0,
+            "option_3_name": "",
+            "option_3_price": 0,
+            "option_4_name": "",
+            "option_4_price": 0
+          }
+        },
+        "item-2": {
+          "type": "item",
+          "settings": {
+            "title": "Nuevo ítem",
+            "badge": "",
+            "short_description": "",
+            "description": "",
+            "base_price": 0,
+            "option_1_name": "",
+            "option_1_price": 0,
+            "option_2_name": "",
+            "option_2_price": 0,
+            "option_3_name": "",
+            "option_3_price": 0,
+            "option_4_name": "",
+            "option_4_price": 0
+          }
+        },
+        "category-2": {
+          "type": "category",
+          "settings": {
+            "title": "Otra categoría",
+            "description": ""
+          }
+        },
+        "item-3": {
+          "type": "item",
+          "settings": {
+            "title": "Nuevo ítem",
+            "badge": "",
+            "short_description": "",
+            "description": "",
+            "base_price": 0,
+            "option_1_name": "",
+            "option_1_price": 0,
+            "option_2_name": "",
+            "option_2_price": 0,
+            "option_3_name": "",
+            "option_3_price": 0,
+            "option_4_name": "",
+            "option_4_price": 0
+          }
+        }
+      },
+      "block_order": [
+        "category-1",
+        "item-1",
+        "item-2",
+        "category-2",
+        "item-3"
+      ],
+      "settings": {
+        "subheading": "Nuestra carta",
+        "title": "Menú",
+        "heading_alignment": "center",
+        "show_filter": true,
+        "sticky_filter": true,
+        "general_category_label": "Otros",
+        "grid_columns": "2",
+        "image_size": 132,
+        "card_radius": 18,
+        "modal_radius": 20,
+        "detail_button_label": "Ver detalles",
+        "from_label": "Desde",
+        "segment_role": "primary"
+      }
+    }
+  },
+  "order": [
+    "menu1"
+  ]
+}
